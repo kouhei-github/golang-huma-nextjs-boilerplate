@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: clinic-rag-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-clinic_rag}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  golang-app:
+    build:
+      context: ai-matching-golang
+      target: builder
+    container_name: ai-matching-golang-app
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-clinic_rag}?sslmode=disable
+      DB_HOST: postgres
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_NAME: ${DB_NAME:-clinic_rag}
+      DB_SSL_MODE: ${DB_SSL_MODE:-disable}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./ai-matching-golang:/app
+    command: air
+
+volumes:
+  postgres_data:
