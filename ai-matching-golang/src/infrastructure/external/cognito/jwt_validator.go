@@ -1,6 +1,7 @@
 package cognito
 
 import (
+	"ai-matching/src/domain/interface/repository"
 	"context"
 	"crypto/rsa"
 	"encoding/base64"
@@ -38,9 +39,11 @@ type CognitoJWTValidator struct {
 	jwkSetMutex   sync.RWMutex
 	lastFetched   time.Time
 	cacheDuration time.Duration
+	userRepo      repository.UserRepository
+	tenantRepo    repository.TenantRepository
 }
 
-func NewCognitoJWTValidator() *CognitoJWTValidator {
+func NewCognitoJWTValidator(userRepo repository.UserRepository, tenantRepo repository.TenantRepository) *CognitoJWTValidator {
 	userPoolID := os.Getenv("COGNITO_USER_POOL_ID")
 	region := os.Getenv("AWS_REGION")
 	clientID := os.Getenv("COGNITO_CLIENT_ID")
@@ -59,6 +62,8 @@ func NewCognitoJWTValidator() *CognitoJWTValidator {
 		region:        region,
 		jwksURL:       jwksURL,
 		cacheDuration: 1 * time.Hour,
+		userRepo:      userRepo,
+		tenantRepo:    tenantRepo,
 	}
 }
 
@@ -255,10 +260,6 @@ func (v *CognitoJWTValidator) GetUserInfoFromToken(token *jwt.Token) (map[string
 		userInfo["user_id"] = sub
 	}
 
-	if email, ok := claims["email"].(string); ok {
-		userInfo["email"] = email
-	}
-
 	if username, ok := claims["cognito:username"].(string); ok {
 		userInfo["username"] = username
 	}
@@ -266,6 +267,26 @@ func (v *CognitoJWTValidator) GetUserInfoFromToken(token *jwt.Token) (map[string
 	if groups, ok := claims["cognito:groups"].([]interface{}); ok {
 		userInfo["groups"] = groups
 	}
+	// Fetch user from database using cognito ID
+	ctx := context.Background()
+	user, err := v.userRepo.GetUserByCognitoID(ctx, userInfo["user_id"].(string))
+	if err != nil {
+		return nil, errors.New("invalid token claims: failed to fetch user")
+	}
+	userInfo["user_id"] = user.ID.String()
 
+	// Get first tenant for this user and its organization
+	tenants, err := v.tenantRepo.GetTenantsByUserID(ctx, user.ID)
+	if err != nil {
+		return nil, errors.New("invalid token claims: failed to fetch tenants")
+	}
+	// Set organization ID from the first tenant (if any)
+	if len(tenants) > 0 {
+		userInfo["organization_id"] = tenants[0].OrganizationID.String()
+		userInfo["tenant_id"] = tenants[0].ID.String()
+		userInfo["tenant_subdomain"] = tenants[0].Subdomain
+		userInfo["tenant_name"] = tenants[0].Name
+		userInfo["tenant_is_active"] = tenants[0].IsActive
+	}
 	return userInfo, nil
 }

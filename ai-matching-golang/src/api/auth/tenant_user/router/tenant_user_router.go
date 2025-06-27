@@ -62,15 +62,4 @@ func RegisterTenantUserRoutes(api huma.API, router fiber.Router, tenantUserContr
 		Tags:        []string{"Tenant Users"},
 		Security:    []map[string][]string{{"bearer": {}}},
 	}, tenantUserController.UpdateUserRole)
-
-	// Get users not in tenant
-	huma.Register(api, huma.Operation{
-		OperationID: "get-users-not-in-tenant",
-		Method:      "GET",
-		Path:        "/api/v1/auth/tenants/{tenantId}/available-users",
-		Summary:     "Get available users",
-		Description: "Get users that are not in this tenant",
-		Tags:        []string{"Tenant Users"},
-		Security:    []map[string][]string{{"bearer": {}}},
-	}, tenantUserController.GetUsersNotInTenant)
 }

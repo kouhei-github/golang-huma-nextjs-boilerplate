@@ -54,3 +54,9 @@ func (r *organizationRepository) GetTenantsByOrganization(ctx context.Context, o
 func (r *organizationRepository) GetOrganizationByTenant(ctx context.Context, tenantID uuid.UUID) (db.Organization, error) {
 	return r.queries.GetOrganizationByTenant(ctx, tenantID)
 }
+
+// Count methods
+
+func (r *organizationRepository) CountOrganizations(ctx context.Context) (int64, error) {
+	return r.queries.CountOrganizations(ctx)
+}

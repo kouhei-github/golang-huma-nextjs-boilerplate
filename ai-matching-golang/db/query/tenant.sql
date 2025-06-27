@@ -55,3 +55,7 @@ SELECT EXISTS(
     SELECT 1 FROM tenant_users
     WHERE tenant_id = @tenant_id::uuid AND user_id = @user_id::uuid
 ) as belongs;
+
+-- name: CountTenantsByOrganization :one
+SELECT COUNT(*) FROM tenants
+WHERE organization_id = @organization_id::uuid AND is_active = true;

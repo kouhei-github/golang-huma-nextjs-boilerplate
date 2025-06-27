@@ -12,7 +12,7 @@ func RegisterUserRoutes(api huma.API, router fiber.Router, userController *contr
 	huma.Register(api, huma.Operation{
 		OperationID: "get-user",
 		Method:      "GET",
-		Path:        "/api/v1/auth/users/{id}",
+		Path:        "/api/v1/auth/users/{userId}",
 		Summary:     "Get user",
 		Description: "Get user by ID",
 		Tags:        []string{"Users"},
@@ -42,7 +42,7 @@ func RegisterUserRoutes(api huma.API, router fiber.Router, userController *contr
 	huma.Register(api, huma.Operation{
 		OperationID: "update-user",
 		Method:      "PUT",
-		Path:        "/api/v1/auth/users/{id}",
+		Path:        "/api/v1/auth/users/{userId}",
 		Summary:     "Update user",
 		Description: "Update an existing user",
 		Tags:        []string{"Users"},
@@ -52,7 +52,7 @@ func RegisterUserRoutes(api huma.API, router fiber.Router, userController *contr
 	huma.Register(api, huma.Operation{
 		OperationID: "delete-user",
 		Method:      "DELETE",
-		Path:        "/api/v1/auth/users/{id}",
+		Path:        "/api/v1/auth/users/{userId}",
 		Summary:     "Delete user",
 		Description: "Delete a user",
 		Tags:        []string{"Users"},

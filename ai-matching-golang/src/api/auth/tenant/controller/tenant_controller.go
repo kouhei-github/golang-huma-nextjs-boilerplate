@@ -20,7 +20,7 @@ func NewTenantController(tenantUsecase *usecase.TenantUsecase) *TenantController
 }
 
 type GetTenantInput struct {
-	ID uuid.UUID `path:"id" doc:"Tenant ID"`
+	ID uuid.UUID `path:"tenantId" doc:"Tenant ID"`
 }
 
 type GetTenantOutput struct {
@@ -90,7 +90,7 @@ func (c *TenantController) CreateTenant(ctx context.Context, input *CreateTenant
 }
 
 type UpdateTenantInput struct {
-	ID   uuid.UUID `path:"id" doc:"Tenant ID"`
+	ID   uuid.UUID `path:"tenantId" doc:"Tenant ID"`
 	Body requests.UpdateTenantRequest
 }
 
@@ -108,7 +108,7 @@ func (c *TenantController) UpdateTenant(ctx context.Context, input *UpdateTenant
 }
 
 type DeleteTenantInput struct {
-	ID uuid.UUID `path:"id" doc:"Tenant ID"`
+	ID uuid.UUID `path:"tenantId" doc:"Tenant ID"`
 }
 
 type DeleteTenantOutput struct {

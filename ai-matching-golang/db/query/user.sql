@@ -53,3 +53,13 @@ FROM users u
          LEFT JOIN tenant_users tu ON u.id = tu.user_id
 WHERE u.id = @id::uuid
 GROUP BY u.id;
+
+-- name: CountUsers :one
+SELECT COUNT(*) FROM users;
+
+-- name: CountUsersNotInTenant :one
+SELECT COUNT(*)
+FROM users u
+WHERE u.id NOT IN (
+    SELECT user_id FROM tenant_users WHERE tenant_id = $1
+);

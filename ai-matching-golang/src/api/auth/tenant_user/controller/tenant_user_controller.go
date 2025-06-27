@@ -20,7 +20,7 @@ func NewTenantUserController(tenantUserUsecase *usecase.TenantUserUsecase) *Tena
 }
 
 type AddUserToTenantInput struct {
-	TenantID uuid.UUID                      `path:"tenantId" doc:"Tenant ID"`
+	TenantID uuid.UUID                       `path:"tenantId" doc:"Tenant ID"`
 	Body     requests.AddUserToTenantRequest `doc:"Add user to tenant request"`
 }
 
@@ -126,8 +126,8 @@ func (c *TenantUserController) GetUserTenants(ctx context.Context, input *GetUse
 }
 
 type UpdateUserRoleInput struct {
-	TenantID uuid.UUID                   `path:"tenantId" doc:"Tenant ID"`
-	UserID   uuid.UUID                   `path:"userId" doc:"User ID"`
+	TenantID uuid.UUID                      `path:"tenantId" doc:"Tenant ID"`
+	UserID   uuid.UUID                      `path:"userId" doc:"User ID"`
 	Body     requests.UpdateUserRoleRequest `doc:"Update user role request"`
 }
 
@@ -155,31 +155,5 @@ type GetUsersNotInTenantInput struct {
 }
 
 type GetUsersNotInTenantOutput struct {
-	Body response.UsersResponse
-}
-
-func (c *TenantUserController) GetUsersNotInTenant(ctx context.Context, input *GetUsersNotInTenantInput) (*GetUsersNotInTenantOutput, error) {
-	limit := int32(input.PageSize)
-	offset := int32((input.Page - 1) * input.PageSize)
-
-	users, err := c.usecase.GetUsersNotInTenant(ctx, input.TenantID, limit, offset)
-	if err != nil {
-		return nil, err
-	}
-
-	var userList []response.UserDetails
-	for _, u := range users {
-		userList = append(userList, response.UserDetails{
-			ID:        u.ID,
-			Email:     u.Email,
-			FirstName: u.FirstName.String,
-			LastName:  u.LastName.String,
-		})
-	}
-
-	return &GetUsersNotInTenantOutput{
-		Body: response.UsersResponse{
-			Users: userList,
-		},
-	}, nil
+	Body response.UsersListResponse
 }

@@ -66,3 +66,9 @@ func (r *tenantRepository) CheckUserBelongsToTenant(ctx context.Context, tenantI
 	}
 	return belongs, nil
 }
+
+// Count methods
+
+func (r *tenantRepository) CountTenantsByOrganization(ctx context.Context, organizationID uuid.UUID) (int64, error) {
+	return r.queries.CountTenantsByOrganization(ctx, organizationID)
+}

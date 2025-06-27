@@ -4,8 +4,9 @@ import (
 	"ai-matching/src/api/auth/user/requests"
 	"ai-matching/src/api/auth/user/response"
 	"ai-matching/src/api/auth/user/usecase"
+	"ai-matching/src/infrastructure/middleware"
 	"context"
-
+	"fmt"
 	"github.com/google/uuid"
 )
 
@@ -20,7 +21,7 @@ func NewUserController(userUsecase *usecase.UserUsecase) *UserController {
 }
 
 type GetUserInput struct {
-	ID uuid.UUID `path:"id" doc:"User ID"`
+	ID uuid.UUID `path:"userId" doc:"User ID"`
 }
 
 type GetUserOutput struct {
@@ -46,6 +47,12 @@ type ListUsersOutput struct {
 }
 
 func (c *UserController) ListUsers(ctx context.Context, input *ListUsersInput) (*ListUsersOutput, error) {
+	user, err := middleware.GetUserFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(user.OrganizationID)
+
 	resp, err := c.usecase.ListUsers(ctx, input.Page, input.PageSize)
 	if err != nil {
 		return nil, err
@@ -72,7 +79,7 @@ func (c *UserController) CreateUser(ctx context.Context, input *CreateUserInput)
 }
 
 type UpdateUserInput struct {
-	ID   uuid.UUID `path:"id" doc:"User ID"`
+	ID   uuid.UUID `path:"userId" doc:"User ID"`
 	Body requests.UpdateUserRequest
 }
 
@@ -90,7 +97,7 @@ func (c *UserController) UpdateUser(ctx context.Context, input *UpdateUserInput)
 }
 
 type DeleteUserInput struct {
-	ID uuid.UUID `path:"id" doc:"User ID"`
+	ID uuid.UUID `path:"userId" doc:"User ID"`
 }
 
 type DeleteUserOutput struct {

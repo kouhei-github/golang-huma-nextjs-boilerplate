@@ -13,6 +13,18 @@ import (
 	"github.com/google/uuid"
 )
 
+const countOrganizations = `-- name: CountOrganizations :one
+SELECT COUNT(*) FROM organizations
+WHERE is_active = true
+`
+
+func (q *Queries) CountOrganizations(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countOrganizations)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createOrganization = `-- name: CreateOrganization :one
 INSERT INTO organizations (
     name, description, is_active

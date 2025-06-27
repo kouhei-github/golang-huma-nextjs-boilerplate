@@ -53,3 +53,5 @@ Thumbs.db
 db/sqlc/
 docs/
 main
+.vscode
+.idea

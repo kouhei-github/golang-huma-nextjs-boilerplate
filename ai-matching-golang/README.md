@@ -1,6 +1,6 @@
 ```json
 {
-  "email": "admin@sample.com",
+  "email": "admin@example.com",
   "firstName": "管理者",
   "lastName": "太郎",
   "organizationDescription": "株式会社サンプルの組織です",

@@ -63,3 +63,13 @@ func (r *userRepository) GetUsersNotInTenant(ctx context.Context, tenantID uuid.
 func (r *userRepository) GetUserWithTenants(ctx context.Context, id uuid.UUID) (db.GetUserWithTenantsRow, error) {
 	return r.queries.GetUserWithTenants(ctx, id)
 }
+
+// Count methods
+
+func (r *userRepository) CountUsers(ctx context.Context) (int64, error) {
+	return r.queries.CountUsers(ctx)
+}
+
+func (r *userRepository) CountUsersNotInTenant(ctx context.Context, tenantID uuid.UUID) (int64, error) {
+	return r.queries.CountUsersNotInTenant(ctx, tenantID)
+}

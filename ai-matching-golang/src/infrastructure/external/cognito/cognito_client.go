@@ -117,7 +117,6 @@ func (c *CognitoClient) ConfirmSignUp(ctx context.Context, email, confirmationCo
 
 func (c *CognitoClient) InitiateAuth(ctx context.Context, email, password string) (*cognitoidentityprovider.InitiateAuthOutput, error) {
 	secretHash := c.calculateSecretHash(email)
-
 	authParams := map[string]string{
 		"USERNAME":    email,
 		"PASSWORD":    password,

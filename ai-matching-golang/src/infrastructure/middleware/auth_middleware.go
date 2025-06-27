@@ -3,20 +3,24 @@ package middleware
 import (
 	"context"
 	"fmt"
+	"github.com/google/uuid"
+	"regexp"
 	"strings"
 
+	"ai-matching/src/domain/interface/repository"
 	"ai-matching/src/infrastructure/external/cognito"
-	"github.com/danielgtaylor/huma/v2"
 	"github.com/gofiber/fiber/v2"
 )
 
 type AuthMiddleware struct {
-	jwtValidator *cognito.CognitoJWTValidator
+	jwtValidator   *cognito.CognitoJWTValidator
+	tenantUserRepo repository.TenantUserRepository
 }
 
-func NewAuthMiddleware() *AuthMiddleware {
+func NewAuthMiddleware(userRepo repository.UserRepository, tenantRepo repository.TenantRepository, tenantUserRepo repository.TenantUserRepository) *AuthMiddleware {
 	return &AuthMiddleware{
-		jwtValidator: cognito.NewCognitoJWTValidator(),
+		jwtValidator:   cognito.NewCognitoJWTValidator(userRepo, tenantRepo),
+		tenantUserRepo: tenantUserRepo,
 	}
 }
 
@@ -50,75 +54,109 @@ func (m *AuthMiddleware) FiberMiddleware() fiber.Handler {
 			})
 		}
 
-		c.Locals("user_id", userInfo["user_id"])
-		c.Locals("email", userInfo["email"])
+		// 型変換を行ってからLocalsに保存
+		if userIDStr, ok := userInfo["user_id"].(string); ok {
+			if userID, err := uuid.Parse(userIDStr); err == nil {
+				c.Locals("user_id", userID)
+			}
+		}
 		c.Locals("token", tokenString)
+
+		// Set organization_id and tenant_id if available with proper type conversion
+		if orgIDStr, ok := userInfo["organization_id"].(string); ok {
+			if orgID, err := uuid.Parse(orgIDStr); err == nil {
+				c.Locals("organization_id", orgID)
+			}
+		}
+		if tenantIDStr, ok := userInfo["tenant_id"].(string); ok {
+			if tenantID, err := uuid.Parse(tenantIDStr); err == nil {
+				c.Locals("tenant_id", tenantID)
+			}
+		}
+		if tenantName, ok := userInfo["tenant_name"]; ok {
+			c.Locals("tenant_name", tenantName)
+		}
+		if tenantSubdomain, ok := userInfo["tenant_subdomain"]; ok {
+			c.Locals("tenant_subdomain", tenantSubdomain)
+		}
+		if tenantIsActive, ok := userInfo["tenant_is_active"]; ok {
+			c.Locals("tenant_is_active", tenantIsActive)
+		}
+
+		// URLパスから organizationId を抽出
+		path := c.Path()
+		organizationId := extractOrganizationIdFromPath(path)
+
+		if organizationId != "" {
+			if orgID, ok := c.Locals("organization_id").(uuid.UUID); ok {
+				if organizationId != orgID.String() {
+					return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+						"error": "Invalid organization ID",
+					})
+				}
+			}
+		}
+
+		// URLパスから tenantId を抽出
+		tenantId := extractTenantIdFromPath(path)
+		if tenantId != "" {
+			if tenantID, ok := c.Locals("tenant_id").(uuid.UUID); ok {
+				if userID, ok := c.Locals("user_id").(uuid.UUID); ok {
+					_, err := m.tenantUserRepo.GetTenantUser(context.Background(), tenantID, userID)
+					if err != nil {
+						return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+							"error": "User not authorized for this tenant",
+						})
+					}
+				}
+			}
+		}
 
 		return c.Next()
 	}
 }
 
-func (m *AuthMiddleware) HumaMiddleware(api huma.API) func(ctx huma.Context, next func(huma.Context)) {
-	return func(ctx huma.Context, next func(huma.Context)) {
-		authHeader := ctx.Header("Authorization")
-		if authHeader == "" {
-			ctx.SetStatus(401)
-			ctx.SetHeader("Content-Type", "application/json")
-			ctx.BodyWriter().Write([]byte(`{"title":"Unauthorized","status":401,"detail":"Missing authorization header"}`))
-			return
-		}
-
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		if tokenString == authHeader {
-			ctx.SetStatus(401)
-			ctx.SetHeader("Content-Type", "application/json")
-			ctx.BodyWriter().Write([]byte(`{"title":"Unauthorized","status":401,"detail":"Invalid authorization header format"}`))
-			return
-		}
-
-		token, err := m.jwtValidator.ValidateToken(tokenString)
-		if err != nil {
-			ctx.SetStatus(401)
-			ctx.SetHeader("Content-Type", "application/json")
-			detail := fmt.Sprintf(`{"title":"Unauthorized","status":401,"detail":"Invalid token: %s"}`, err.Error())
-			ctx.BodyWriter().Write([]byte(detail))
-			return
-		}
-
-		userInfo, err := m.jwtValidator.GetUserInfoFromToken(token)
-		if err != nil {
-			ctx.SetStatus(401)
-			ctx.SetHeader("Content-Type", "application/json")
-			detail := fmt.Sprintf(`{"title":"Unauthorized","status":401,"detail":"Failed to extract user info: %s"}`, err.Error())
-			ctx.BodyWriter().Write([]byte(detail))
-			return
-		}
-
-		newCtx := context.WithValue(ctx.Context(), "user_id", userInfo["user_id"])
-		newCtx = context.WithValue(newCtx, "email", userInfo["email"])
-		newCtx = context.WithValue(newCtx, "token", tokenString)
-
-		ctx = huma.WithContext(ctx, newCtx)
-
-		next(ctx)
+// URLパスから organizationId を抽出する関数
+func extractOrganizationIdFromPath(path string) string {
+	// /api/v1/auth/organizations/{organizationId} のパターンにマッチ
+	re := regexp.MustCompile(`/organizations/([a-fA-F0-9-]+)`)
+	matches := re.FindStringSubmatch(path)
+	if len(matches) > 1 {
+		return matches[1]
 	}
+	return ""
+}
+
+// URLパスから tenantId を抽出する関数
+func extractTenantIdFromPath(path string) string {
+	// 必要に応じてテナントIDのパターンも追加
+	re := regexp.MustCompile(`/tenants/([a-fA-F0-9-]+)`)
+	matches := re.FindStringSubmatch(path)
+	if len(matches) > 1 {
+		return matches[1]
+	}
+	return ""
+}
+
+type Tenant struct {
+	ID        uuid.UUID
+	Name      string
+	Subdomain string
+	IsActive  bool
 }
 
 type UserContext struct {
-	UserID string
-	Email  string
-	Token  string
+	UserID         uuid.UUID
+	Email          string
+	Token          string
+	OrganizationID uuid.UUID
+	Tenant         *Tenant
 }
 
 func GetUserFromContext(ctx context.Context) (*UserContext, error) {
-	userID, ok := ctx.Value("user_id").(string)
+	userID, ok := ctx.Value("user_id").(uuid.UUID)
 	if !ok {
 		return nil, fmt.Errorf("user_id not found in context")
-	}
-
-	email, ok := ctx.Value("email").(string)
-	if !ok {
-		return nil, fmt.Errorf("email not found in context")
 	}
 
 	token, ok := ctx.Value("token").(string)
@@ -126,9 +164,28 @@ func GetUserFromContext(ctx context.Context) (*UserContext, error) {
 		return nil, fmt.Errorf("token not found in context")
 	}
 
-	return &UserContext{
+	userContext := &UserContext{
 		UserID: userID,
-		Email:  email,
 		Token:  token,
-	}, nil
+		Tenant: &Tenant{},
+	}
+
+	// Organization ID and Tenant ID are optional
+	if orgID, ok := ctx.Value("organization_id").(uuid.UUID); ok {
+		userContext.OrganizationID = orgID
+	}
+	if tenantID, ok := ctx.Value("tenant_id").(uuid.UUID); ok {
+		userContext.Tenant.ID = tenantID
+	}
+	if tenantName, ok := ctx.Value("tenant_name").(string); ok {
+		userContext.Tenant.Name = tenantName
+	}
+	if tenantSubdomain, ok := ctx.Value("tenant_subdomain").(string); ok {
+		userContext.Tenant.Subdomain = tenantSubdomain
+	}
+	if tenantIsActive, ok := ctx.Value("tenant_is_active").(bool); ok {
+		userContext.Tenant.IsActive = tenantIsActive
+	}
+
+	return userContext, nil
 }

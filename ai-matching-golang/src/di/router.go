@@ -52,7 +52,7 @@ func SetupRouter(container *Container) *fiber.App {
 	publicAPI := app.Group("/api/v1/public")
 	authAPI := app.Group("/api/v1/auth")
 
-	authMiddleware := middleware.NewAuthMiddleware()
+	authMiddleware := middleware.NewAuthMiddleware(container.UserRepository, container.TenantRepository, container.TenantUserRepository)
 	authAPI.Use(authMiddleware.FiberMiddleware())
 
 	healthRouter.RegisterHealthRoutes(api, publicAPI, container.HealthController)

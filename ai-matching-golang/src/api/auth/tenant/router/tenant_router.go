@@ -12,7 +12,7 @@ func RegisterTenantRoutes(api huma.API, router fiber.Router, tenantController *c
 	huma.Register(api, huma.Operation{
 		OperationID: "get-tenant",
 		Method:      "GET",
-		Path:        "/api/v1/auth/tenants/{id}",
+		Path:        "/api/v1/auth/tenants/{tenantId}",
 		Summary:     "Get tenant",
 		Description: "Get tenant by ID",
 		Tags:        []string{"Tenants"},
@@ -52,7 +52,7 @@ func RegisterTenantRoutes(api huma.API, router fiber.Router, tenantController *c
 	huma.Register(api, huma.Operation{
 		OperationID: "update-tenant",
 		Method:      "PUT",
-		Path:        "/api/v1/auth/tenants/{id}",
+		Path:        "/api/v1/auth/tenants/{tenantId}",
 		Summary:     "Update tenant",
 		Description: "Update an existing tenant",
 		Tags:        []string{"Tenants"},
@@ -62,7 +62,7 @@ func RegisterTenantRoutes(api huma.API, router fiber.Router, tenantController *c
 	huma.Register(api, huma.Operation{
 		OperationID: "delete-tenant",
 		Method:      "DELETE",
-		Path:        "/api/v1/auth/tenants/{id}",
+		Path:        "/api/v1/auth/tenants/{tenantId}",
 		Summary:     "Delete tenant",
 		Description: "Delete a tenant",
 		Tags:        []string{"Tenants"},

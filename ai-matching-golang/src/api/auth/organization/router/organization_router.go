@@ -12,7 +12,7 @@ func RegisterOrganizationRoutes(api huma.API, router fiber.Router, orgController
 	huma.Register(api, huma.Operation{
 		OperationID: "get-organization",
 		Method:      "GET",
-		Path:        "/api/v1/auth/organizations/{id}",
+		Path:        "/api/v1/auth/organizations/{organizationId}",
 		Summary:     "Get organization",
 		Description: "Get organization by ID",
 		Tags:        []string{"Organizations"},
@@ -42,7 +42,7 @@ func RegisterOrganizationRoutes(api huma.API, router fiber.Router, orgController
 	huma.Register(api, huma.Operation{
 		OperationID: "update-organization",
 		Method:      "PUT",
-		Path:        "/api/v1/auth/organizations/{id}",
+		Path:        "/api/v1/auth/organizations/{organizationId}",
 		Summary:     "Update organization",
 		Description: "Update an existing organization",
 		Tags:        []string{"Organizations"},

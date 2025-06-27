@@ -32,6 +32,18 @@ func (q *Queries) CheckUserBelongsToTenant(ctx context.Context, arg CheckUserBel
 	return belongs, err
 }
 
+const countTenantsByOrganization = `-- name: CountTenantsByOrganization :one
+SELECT COUNT(*) FROM tenants
+WHERE organization_id = $1::uuid AND is_active = true
+`
+
+func (q *Queries) CountTenantsByOrganization(ctx context.Context, organizationID uuid.UUID) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countTenantsByOrganization, organizationID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createTenant = `-- name: CreateTenant :one
 INSERT INTO tenants (
     organization_id, name, subdomain, is_active

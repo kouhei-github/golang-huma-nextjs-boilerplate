@@ -13,6 +13,32 @@ import (
 	"github.com/google/uuid"
 )
 
+const countUsers = `-- name: CountUsers :one
+SELECT COUNT(*) FROM users
+`
+
+func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countUsers)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countUsersNotInTenant = `-- name: CountUsersNotInTenant :one
+SELECT COUNT(*)
+FROM users u
+WHERE u.id NOT IN (
+    SELECT user_id FROM tenant_users WHERE tenant_id = $1
+)
+`
+
+func (q *Queries) CountUsersNotInTenant(ctx context.Context, tenantID uuid.UUID) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countUsersNotInTenant, tenantID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
     cognito_id, email, first_name, last_name

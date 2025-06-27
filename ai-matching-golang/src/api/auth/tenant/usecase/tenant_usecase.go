@@ -61,6 +61,12 @@ func (u *TenantUsecase) ListTenantsByOrganization(ctx context.Context, organizat
 		return nil, err
 	}
 
+	// Get total count
+	totalCount, err := u.tenantRepo.CountTenantsByOrganization(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
+
 	tenantResponses := make([]response.TenantResponse, len(tenants))
 	for i, tenant := range tenants {
 		tenantResponses[i] = response.TenantResponse{
@@ -76,7 +82,7 @@ func (u *TenantUsecase) ListTenantsByOrganization(ctx context.Context, organizat
 
 	return &response.TenantListResponse{
 		Tenants:  tenantResponses,
-		Total:    len(tenantResponses),
+		Total:    int(totalCount),
 		Page:     page,
 		PageSize: pageSize,
 	}, nil

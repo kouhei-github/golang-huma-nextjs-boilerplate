@@ -20,7 +20,7 @@ func NewOrganizationController(orgUsecase *usecase.OrganizationUsecase) *Organiz
 }
 
 type GetOrganizationInput struct {
-	ID uuid.UUID `path:"id" doc:"Organization ID"`
+	ID uuid.UUID `path:"organizationId" doc:"Organization ID"`
 }
 
 type GetOrganizationOutput struct {
@@ -72,7 +72,7 @@ func (c *OrganizationController) CreateOrganization(ctx context.Context, input *
 }
 
 type UpdateOrganizationInput struct {
-	ID   uuid.UUID `path:"id" doc:"Organization ID"`
+	ID   uuid.UUID `path:"organizationId" doc:"Organization ID"`
 	Body requests.UpdateOrganizationRequest
 }
 
@@ -90,7 +90,7 @@ func (c *OrganizationController) UpdateOrganization(ctx context.Context, input *
 }
 
 type DeleteOrganizationInput struct {
-	ID uuid.UUID `path:"id" doc:"Organization ID"`
+	ID uuid.UUID `path:"organizationId" doc:"Organization ID"`
 }
 
 type DeleteOrganizationOutput struct {

@@ -48,3 +48,7 @@ SELECT o.* FROM organizations o
 INNER JOIN tenants t ON o.id = t.organization_id
 WHERE t.id = @tenant_id::uuid
 LIMIT 1;
+
+-- name: CountOrganizations :one
+SELECT COUNT(*) FROM organizations
+WHERE is_active = true;

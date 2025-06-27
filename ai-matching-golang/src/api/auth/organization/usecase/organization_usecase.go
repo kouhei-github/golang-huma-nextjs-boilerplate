@@ -44,6 +44,12 @@ func (u *OrganizationUsecase) ListOrganizations(ctx context.Context, page, pageS
 		return nil, err
 	}
 
+	// Get total count
+	totalCount, err := u.orgRepo.CountOrganizations(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	organizations := make([]response.OrganizationResponse, len(orgs))
 	for i, org := range orgs {
 		organizations[i] = response.OrganizationResponse{
@@ -58,7 +64,7 @@ func (u *OrganizationUsecase) ListOrganizations(ctx context.Context, page, pageS
 
 	return &response.OrganizationListResponse{
 		Organizations: organizations,
-		Total:         len(organizations),
+		Total:         int(totalCount),
 		Page:          page,
 		PageSize:      pageSize,
 	}, nil

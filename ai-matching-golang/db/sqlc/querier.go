@@ -13,6 +13,10 @@ import (
 type Querier interface {
 	AddUserToTenant(ctx context.Context, arg AddUserToTenantParams) (TenantUser, error)
 	CheckUserBelongsToTenant(ctx context.Context, arg CheckUserBelongsToTenantParams) (bool, error)
+	CountOrganizations(ctx context.Context) (int64, error)
+	CountTenantsByOrganization(ctx context.Context, organizationID uuid.UUID) (int64, error)
+	CountUsers(ctx context.Context) (int64, error)
+	CountUsersNotInTenant(ctx context.Context, tenantID uuid.UUID) (int64, error)
 	CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error)
 	CreateTenant(ctx context.Context, arg CreateTenantParams) (Tenant, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)

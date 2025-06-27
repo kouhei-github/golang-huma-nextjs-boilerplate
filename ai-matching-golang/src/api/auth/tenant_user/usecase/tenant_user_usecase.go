@@ -161,22 +161,3 @@ func (u *TenantUserUsecase) ListTenantUsers(ctx context.Context, tenantID uuid.U
 
 	return users, nil
 }
-
-// GetUsersNotInTenant gets users that are not in a specific tenant
-func (u *TenantUserUsecase) GetUsersNotInTenant(ctx context.Context, tenantID uuid.UUID, limit, offset int32) ([]db.User, error) {
-	// Verify tenant exists
-	_, err := u.tenantRepo.GetTenant(ctx, tenantID)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, errors.New("tenant not found")
-		}
-		return nil, fmt.Errorf("failed to get tenant: %w", err)
-	}
-
-	users, err := u.userRepo.GetUsersNotInTenant(ctx, tenantID, limit, offset)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get users not in tenant: %w", err)
-	}
-
-	return users, nil
-}

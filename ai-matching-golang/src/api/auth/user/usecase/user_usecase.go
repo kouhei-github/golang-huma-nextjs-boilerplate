@@ -76,6 +76,12 @@ func (u *UserUsecase) ListUsers(ctx context.Context, page, pageSize int) (*respo
 		return nil, err
 	}
 
+	// Get total count
+	totalCount, err := u.userRepo.CountUsers(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	userResponses := make([]response.UserResponse, len(users))
 	for i, user := range users {
 		// Get user's tenants
@@ -113,7 +119,7 @@ func (u *UserUsecase) ListUsers(ctx context.Context, page, pageSize int) (*respo
 
 	return &response.UserListResponse{
 		Users:    userResponses,
-		Total:    len(userResponses),
+		Total:    int(totalCount),
 		Page:     page,
 		PageSize: pageSize,
 	}, nil
