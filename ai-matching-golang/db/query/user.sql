@@ -1,14 +1,14 @@
 -- name: GetUser :one
 SELECT * FROM users
-WHERE id = $1 LIMIT 1;
+WHERE id = @id::uuid LIMIT 1;
 
 -- name: GetUserByEmail :one
 SELECT * FROM users
-WHERE email = $1 LIMIT 1;
+WHERE email = @email LIMIT 1;
 
 -- name: GetUserByCognitoID :one
 SELECT * FROM users
-WHERE cognito_id = $1 LIMIT 1;
+WHERE cognito_id = @cognito_id LIMIT 1;
 
 -- name: ListUsers :many
 SELECT * FROM users
@@ -19,22 +19,22 @@ LIMIT $1 OFFSET $2;
 INSERT INTO users (
     cognito_id, email, first_name, last_name
 ) VALUES (
-    $1, $2, $3, $4
-)
-RETURNING *;
+             @cognito_id, @email, @first_name, @last_name
+         )
+    RETURNING *;
 
 -- name: UpdateUser :one
 UPDATE users
-SET email = $2,
-    first_name = $3,
-    last_name = $4,
+SET email = @email,
+    first_name = @first_name,
+    last_name = @last_name,
     updated_at = NOW()
-WHERE id = $1
+WHERE id = @id::uuid
 RETURNING *;
 
 -- name: DeleteUser :exec
 DELETE FROM users
-WHERE id = $1;
+WHERE id = @id::uuid;
 
 -- name: GetUsersNotInTenant :many
 SELECT u.*
@@ -46,10 +46,10 @@ ORDER BY u.email
 LIMIT $2 OFFSET $3;
 
 -- name: GetUserWithTenants :one
-SELECT 
+SELECT
     u.*,
     COUNT(DISTINCT tu.tenant_id) as tenant_count
 FROM users u
-LEFT JOIN tenant_users tu ON u.id = tu.user_id
-WHERE u.id = $1
+         LEFT JOIN tenant_users tu ON u.id = tu.user_id
+WHERE u.id = @id::uuid
 GROUP BY u.id;

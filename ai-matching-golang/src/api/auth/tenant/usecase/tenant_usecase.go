@@ -6,6 +6,8 @@ import (
 	"ai-matching/src/api/auth/tenant/response"
 	"ai-matching/src/domain/interface/repository"
 	"context"
+
+	"github.com/google/uuid"
 )
 
 type TenantUsecase struct {
@@ -18,7 +20,7 @@ func NewTenantUsecase(tenantRepo repository.TenantRepository) *TenantUsecase {
 	}
 }
 
-func (u *TenantUsecase) GetTenant(ctx context.Context, id int64) (*response.TenantResponse, error) {
+func (u *TenantUsecase) GetTenant(ctx context.Context, id uuid.UUID) (*response.TenantResponse, error) {
 	tenant, err := u.tenantRepo.GetTenant(ctx, id)
 	if err != nil {
 		return nil, err
@@ -52,7 +54,7 @@ func (u *TenantUsecase) GetTenantBySubdomain(ctx context.Context, subdomain stri
 	}, nil
 }
 
-func (u *TenantUsecase) ListTenantsByOrganization(ctx context.Context, organizationID int64, page, pageSize int) (*response.TenantListResponse, error) {
+func (u *TenantUsecase) ListTenantsByOrganization(ctx context.Context, organizationID uuid.UUID, page, pageSize int) (*response.TenantListResponse, error) {
 	offset := (page - 1) * pageSize
 	tenants, err := u.tenantRepo.ListTenantsByOrganization(ctx, organizationID, int32(pageSize), int32(offset))
 	if err != nil {
@@ -102,7 +104,7 @@ func (u *TenantUsecase) CreateTenant(ctx context.Context, req requests.CreateTen
 	}, nil
 }
 
-func (u *TenantUsecase) UpdateTenant(ctx context.Context, id int64, req requests.UpdateTenantRequest) (*response.TenantResponse, error) {
+func (u *TenantUsecase) UpdateTenant(ctx context.Context, id uuid.UUID, req requests.UpdateTenantRequest) (*response.TenantResponse, error) {
 	tenant, err := u.tenantRepo.UpdateTenant(ctx, db.UpdateTenantParams{
 		ID:        id,
 		Name:      req.Name,
@@ -124,6 +126,6 @@ func (u *TenantUsecase) UpdateTenant(ctx context.Context, id int64, req requests
 	}, nil
 }
 
-func (u *TenantUsecase) DeleteTenant(ctx context.Context, id int64) error {
+func (u *TenantUsecase) DeleteTenant(ctx context.Context, id uuid.UUID) error {
 	return u.tenantRepo.DeleteTenant(ctx, id)
 }

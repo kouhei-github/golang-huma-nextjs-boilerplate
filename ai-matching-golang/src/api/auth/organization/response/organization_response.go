@@ -1,9 +1,13 @@
 package response
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type OrganizationResponse struct {
-	ID          int64     `json:"id" doc:"Organization ID"`
+	ID          uuid.UUID `json:"id" doc:"Organization ID"`
 	Name        string    `json:"name" doc:"Organization name"`
 	Description string    `json:"description" doc:"Organization description"`
 	IsActive    bool      `json:"isActive" doc:"Is organization active"`

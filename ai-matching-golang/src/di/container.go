@@ -102,7 +102,7 @@ func NewContainer() *Container {
 
 	// Initialize usecases
 	authUc := publicAuthUsecase.NewAuthUsecase(userRepo, tenantUserRepo, tenantRepo, orgRepo, cognitoClient)
-	userUc := userUsecase.NewUserUsecase(userRepo, tenantUserRepo)
+	userUc := userUsecase.NewUserUsecase(userRepo, tenantUserRepo, cognitoClient)
 	orgUc := organizationUsecase.NewOrganizationUsecase(orgRepo)
 	tenantUc := tenantUsecase.NewTenantUsecase(tenantRepo)
 	tenantUserUc := tenantUserUsecase.NewTenantUserUsecase(tenantUserRepo, tenantRepo, userRepo)

@@ -7,6 +7,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+
+	"github.com/google/uuid"
 )
 
 type TenantUserUsecase struct {
@@ -24,7 +26,7 @@ func NewTenantUserUsecase(tenantUserRepo repository.TenantUserRepository, tenant
 }
 
 // AddUserToTenant adds a user to a tenant with a specified role
-func (u *TenantUserUsecase) AddUserToTenant(ctx context.Context, tenantID, userID int64, role string) error {
+func (u *TenantUserUsecase) AddUserToTenant(ctx context.Context, tenantID, userID uuid.UUID, role string) error {
 	// Verify tenant exists
 	_, err := u.tenantRepo.GetTenant(ctx, tenantID)
 	if err != nil {
@@ -66,7 +68,7 @@ func (u *TenantUserUsecase) AddUserToTenant(ctx context.Context, tenantID, userI
 }
 
 // RemoveUserFromTenant removes a user from a tenant
-func (u *TenantUserUsecase) RemoveUserFromTenant(ctx context.Context, tenantID, userID int64) error {
+func (u *TenantUserUsecase) RemoveUserFromTenant(ctx context.Context, tenantID, userID uuid.UUID) error {
 	// Check if user belongs to tenant
 	exists, err := u.tenantRepo.CheckUserBelongsToTenant(ctx, tenantID, userID)
 	if err != nil {
@@ -85,7 +87,7 @@ func (u *TenantUserUsecase) RemoveUserFromTenant(ctx context.Context, tenantID, 
 }
 
 // GetUsersByTenant gets all users in a tenant
-func (u *TenantUserUsecase) GetUsersByTenant(ctx context.Context, tenantID int64) ([]db.User, error) {
+func (u *TenantUserUsecase) GetUsersByTenant(ctx context.Context, tenantID uuid.UUID) ([]db.User, error) {
 	// Verify tenant exists
 	_, err := u.tenantRepo.GetTenant(ctx, tenantID)
 	if err != nil {
@@ -104,7 +106,7 @@ func (u *TenantUserUsecase) GetUsersByTenant(ctx context.Context, tenantID int64
 }
 
 // GetTenantsByUser gets all tenants for a user
-func (u *TenantUserUsecase) GetTenantsByUser(ctx context.Context, userID int64) ([]db.Tenant, error) {
+func (u *TenantUserUsecase) GetTenantsByUser(ctx context.Context, userID uuid.UUID) ([]db.Tenant, error) {
 	// Verify user exists
 	_, err := u.userRepo.GetUser(ctx, userID)
 	if err != nil {
@@ -123,7 +125,7 @@ func (u *TenantUserUsecase) GetTenantsByUser(ctx context.Context, userID int64) 
 }
 
 // UpdateUserRoleInTenant updates a user's role in a tenant
-func (u *TenantUserUsecase) UpdateUserRoleInTenant(ctx context.Context, tenantID, userID int64, role string) error {
+func (u *TenantUserUsecase) UpdateUserRoleInTenant(ctx context.Context, tenantID, userID uuid.UUID, role string) error {
 	// Check if user belongs to tenant
 	exists, err := u.tenantRepo.CheckUserBelongsToTenant(ctx, tenantID, userID)
 	if err != nil {
@@ -142,7 +144,7 @@ func (u *TenantUserUsecase) UpdateUserRoleInTenant(ctx context.Context, tenantID
 }
 
 // ListTenantUsers lists all users in a tenant with their details
-func (u *TenantUserUsecase) ListTenantUsers(ctx context.Context, tenantID int64) ([]db.ListTenantUsersRow, error) {
+func (u *TenantUserUsecase) ListTenantUsers(ctx context.Context, tenantID uuid.UUID) ([]db.ListTenantUsersRow, error) {
 	// Verify tenant exists
 	_, err := u.tenantRepo.GetTenant(ctx, tenantID)
 	if err != nil {
@@ -161,7 +163,7 @@ func (u *TenantUserUsecase) ListTenantUsers(ctx context.Context, tenantID int64)
 }
 
 // GetUsersNotInTenant gets users that are not in a specific tenant
-func (u *TenantUserUsecase) GetUsersNotInTenant(ctx context.Context, tenantID int64, limit, offset int32) ([]db.User, error) {
+func (u *TenantUserUsecase) GetUsersNotInTenant(ctx context.Context, tenantID uuid.UUID, limit, offset int32) ([]db.User, error) {
 	// Verify tenant exists
 	_, err := u.tenantRepo.GetTenant(ctx, tenantID)
 	if err != nil {

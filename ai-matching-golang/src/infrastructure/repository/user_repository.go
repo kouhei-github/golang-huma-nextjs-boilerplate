@@ -4,6 +4,7 @@ import (
 	"ai-matching/db/sqlc"
 	"ai-matching/src/domain/interface/repository"
 	"context"
+	"github.com/google/uuid"
 )
 
 type userRepository struct {
@@ -16,7 +17,7 @@ func NewUserRepository(queries db.Querier) repository.UserRepository {
 	}
 }
 
-func (r *userRepository) GetUser(ctx context.Context, id int64) (db.User, error) {
+func (r *userRepository) GetUser(ctx context.Context, id uuid.UUID) (db.User, error) {
 	return r.queries.GetUser(ctx, id)
 }
 
@@ -44,13 +45,13 @@ func (r *userRepository) UpdateUser(ctx context.Context, params db.UpdateUserPar
 	return r.queries.UpdateUser(ctx, params)
 }
 
-func (r *userRepository) DeleteUser(ctx context.Context, id int64) error {
+func (r *userRepository) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	return r.queries.DeleteUser(ctx, id)
 }
 
 // Relationship methods
 
-func (r *userRepository) GetUsersNotInTenant(ctx context.Context, tenantID int64, limit, offset int32) ([]db.User, error) {
+func (r *userRepository) GetUsersNotInTenant(ctx context.Context, tenantID uuid.UUID, limit, offset int32) ([]db.User, error) {
 	params := db.GetUsersNotInTenantParams{
 		TenantID: tenantID,
 		Limit:    limit,
@@ -59,6 +60,6 @@ func (r *userRepository) GetUsersNotInTenant(ctx context.Context, tenantID int64
 	return r.queries.GetUsersNotInTenant(ctx, params)
 }
 
-func (r *userRepository) GetUserWithTenants(ctx context.Context, id int64) (db.GetUserWithTenantsRow, error) {
+func (r *userRepository) GetUserWithTenants(ctx context.Context, id uuid.UUID) (db.GetUserWithTenantsRow, error) {
 	return r.queries.GetUserWithTenants(ctx, id)
 }

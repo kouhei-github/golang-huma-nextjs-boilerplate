@@ -9,6 +9,8 @@ import (
 	"context"
 	"database/sql"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const createOrganization = `-- name: CreateOrganization :one
@@ -42,20 +44,20 @@ func (q *Queries) CreateOrganization(ctx context.Context, arg CreateOrganization
 
 const deleteOrganization = `-- name: DeleteOrganization :exec
 DELETE FROM organizations
-WHERE id = $1
+WHERE id = $1::uuid
 `
 
-func (q *Queries) DeleteOrganization(ctx context.Context, id int64) error {
+func (q *Queries) DeleteOrganization(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, deleteOrganization, id)
 	return err
 }
 
 const getOrganization = `-- name: GetOrganization :one
 SELECT id, name, description, is_active, created_at, updated_at FROM organizations
-WHERE id = $1 LIMIT 1
+WHERE id = $1::uuid LIMIT 1
 `
 
-func (q *Queries) GetOrganization(ctx context.Context, id int64) (Organization, error) {
+func (q *Queries) GetOrganization(ctx context.Context, id uuid.UUID) (Organization, error) {
 	row := q.db.QueryRowContext(ctx, getOrganization, id)
 	var i Organization
 	err := row.Scan(
@@ -72,12 +74,12 @@ func (q *Queries) GetOrganization(ctx context.Context, id int64) (Organization, 
 const getOrganizationByTenant = `-- name: GetOrganizationByTenant :one
 SELECT o.id, o.name, o.description, o.is_active, o.created_at, o.updated_at FROM organizations o
 INNER JOIN tenants t ON o.id = t.organization_id
-WHERE t.id = $1
+WHERE t.id = $1::uuid
 LIMIT 1
 `
 
-func (q *Queries) GetOrganizationByTenant(ctx context.Context, id int64) (Organization, error) {
-	row := q.db.QueryRowContext(ctx, getOrganizationByTenant, id)
+func (q *Queries) GetOrganizationByTenant(ctx context.Context, tenantID uuid.UUID) (Organization, error) {
+	row := q.db.QueryRowContext(ctx, getOrganizationByTenant, tenantID)
 	var i Organization
 	err := row.Scan(
 		&i.ID,
@@ -96,12 +98,12 @@ SELECT
     COUNT(t.id) as tenant_count
 FROM organizations o
 LEFT JOIN tenants t ON o.id = t.organization_id AND t.is_active = true
-WHERE o.id = $1
+WHERE o.id = $1::uuid
 GROUP BY o.id
 `
 
 type GetOrganizationWithTenantsRow struct {
-	ID          int64          `json:"id"`
+	ID          uuid.UUID      `json:"id"`
 	Name        string         `json:"name"`
 	Description sql.NullString `json:"description"`
 	IsActive    bool           `json:"is_active"`
@@ -110,7 +112,7 @@ type GetOrganizationWithTenantsRow struct {
 	TenantCount int64          `json:"tenant_count"`
 }
 
-func (q *Queries) GetOrganizationWithTenants(ctx context.Context, id int64) (GetOrganizationWithTenantsRow, error) {
+func (q *Queries) GetOrganizationWithTenants(ctx context.Context, id uuid.UUID) (GetOrganizationWithTenantsRow, error) {
 	row := q.db.QueryRowContext(ctx, getOrganizationWithTenants, id)
 	var i GetOrganizationWithTenantsRow
 	err := row.Scan(
@@ -127,11 +129,11 @@ func (q *Queries) GetOrganizationWithTenants(ctx context.Context, id int64) (Get
 
 const getTenantsByOrganization = `-- name: GetTenantsByOrganization :many
 SELECT id, organization_id, name, subdomain, is_active, created_at, updated_at FROM tenants
-WHERE organization_id = $1 AND is_active = true
+WHERE organization_id = $1::uuid AND is_active = true
 ORDER BY name
 `
 
-func (q *Queries) GetTenantsByOrganization(ctx context.Context, organizationID int64) ([]Tenant, error) {
+func (q *Queries) GetTenantsByOrganization(ctx context.Context, organizationID uuid.UUID) ([]Tenant, error) {
 	rows, err := q.db.QueryContext(ctx, getTenantsByOrganization, organizationID)
 	if err != nil {
 		return nil, err
@@ -206,27 +208,27 @@ func (q *Queries) ListOrganizations(ctx context.Context, arg ListOrganizationsPa
 
 const updateOrganization = `-- name: UpdateOrganization :one
 UPDATE organizations
-SET name = $2,
-    description = $3,
-    is_active = $4,
+SET name = $1,
+    description = $2,
+    is_active = $3,
     updated_at = NOW()
-WHERE id = $1
+WHERE id = $4::uuid
 RETURNING id, name, description, is_active, created_at, updated_at
 `
 
 type UpdateOrganizationParams struct {
-	ID          int64          `json:"id"`
 	Name        string         `json:"name"`
 	Description sql.NullString `json:"description"`
 	IsActive    bool           `json:"is_active"`
+	ID          uuid.UUID      `json:"id"`
 }
 
 func (q *Queries) UpdateOrganization(ctx context.Context, arg UpdateOrganizationParams) (Organization, error) {
 	row := q.db.QueryRowContext(ctx, updateOrganization,
-		arg.ID,
 		arg.Name,
 		arg.Description,
 		arg.IsActive,
+		arg.ID,
 	)
 	var i Organization
 	err := row.Scan(

@@ -7,10 +7,12 @@ package db
 import (
 	"database/sql"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type Organization struct {
-	ID          int64          `json:"id"`
+	ID          uuid.UUID      `json:"id"`
 	Name        string         `json:"name"`
 	Description sql.NullString `json:"description"`
 	IsActive    bool           `json:"is_active"`
@@ -19,8 +21,8 @@ type Organization struct {
 }
 
 type Tenant struct {
-	ID             int64     `json:"id"`
-	OrganizationID int64     `json:"organization_id"`
+	ID             uuid.UUID `json:"id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
 	Name           string    `json:"name"`
 	Subdomain      string    `json:"subdomain"`
 	IsActive       bool      `json:"is_active"`
@@ -29,16 +31,16 @@ type Tenant struct {
 }
 
 type TenantUser struct {
-	ID        int64          `json:"id"`
-	TenantID  int64          `json:"tenant_id"`
-	UserID    int64          `json:"user_id"`
+	ID        uuid.UUID      `json:"id"`
+	TenantID  uuid.UUID      `json:"tenant_id"`
+	UserID    uuid.UUID      `json:"user_id"`
 	Role      sql.NullString `json:"role"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 }
 
 type User struct {
-	ID        int64          `json:"id"`
+	ID        uuid.UUID      `json:"id"`
 	CognitoID string         `json:"cognito_id"`
 	Email     string         `json:"email"`
 	FirstName sql.NullString `json:"first_name"`

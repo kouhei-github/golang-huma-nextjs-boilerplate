@@ -5,6 +5,8 @@ import (
 	"ai-matching/src/api/auth/user/response"
 	"ai-matching/src/api/auth/user/usecase"
 	"context"
+
+	"github.com/google/uuid"
 )
 
 type UserController struct {
@@ -18,7 +20,7 @@ func NewUserController(userUsecase *usecase.UserUsecase) *UserController {
 }
 
 type GetUserInput struct {
-	ID int64 `path:"id" doc:"User ID"`
+	ID uuid.UUID `path:"id" doc:"User ID"`
 }
 
 type GetUserOutput struct {
@@ -70,7 +72,7 @@ func (c *UserController) CreateUser(ctx context.Context, input *CreateUserInput)
 }
 
 type UpdateUserInput struct {
-	ID   int64 `path:"id" doc:"User ID"`
+	ID   uuid.UUID `path:"id" doc:"User ID"`
 	Body requests.UpdateUserRequest
 }
 
@@ -88,7 +90,7 @@ func (c *UserController) UpdateUser(ctx context.Context, input *UpdateUserInput)
 }
 
 type DeleteUserInput struct {
-	ID int64 `path:"id" doc:"User ID"`
+	ID uuid.UUID `path:"id" doc:"User ID"`
 }
 
 type DeleteUserOutput struct {

@@ -1,6 +1,9 @@
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 -- Create organizations table
 CREATE TABLE IF NOT EXISTS organizations (
-    id BIGSERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
     description TEXT,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -10,8 +13,8 @@ CREATE TABLE IF NOT EXISTS organizations (
 
 -- Create tenants table
 CREATE TABLE IF NOT EXISTS tenants (
-    id BIGSERIAL PRIMARY KEY,
-    organization_id BIGINT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     subdomain VARCHAR(100) UNIQUE NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -21,7 +24,7 @@ CREATE TABLE IF NOT EXISTS tenants (
 
 -- Create users table (without direct tenant relationship)
 CREATE TABLE IF NOT EXISTS users (
-    id BIGSERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     cognito_id VARCHAR(255) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     first_name VARCHAR(100),
@@ -32,9 +35,9 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- Create tenant_users junction table for many-to-many relationship
 CREATE TABLE IF NOT EXISTS tenant_users (
-    id BIGSERIAL PRIMARY KEY,
-    tenant_id BIGINT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     role VARCHAR(50) DEFAULT 'member', -- optional: to store user role in tenant
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),

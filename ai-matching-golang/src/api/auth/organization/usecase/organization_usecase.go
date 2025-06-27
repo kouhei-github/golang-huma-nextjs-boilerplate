@@ -7,6 +7,8 @@ import (
 	"ai-matching/src/domain/interface/repository"
 	"context"
 	"database/sql"
+
+	"github.com/google/uuid"
 )
 
 type OrganizationUsecase struct {
@@ -19,7 +21,7 @@ func NewOrganizationUsecase(orgRepo repository.OrganizationRepository) *Organiza
 	}
 }
 
-func (u *OrganizationUsecase) GetOrganization(ctx context.Context, id int64) (*response.OrganizationResponse, error) {
+func (u *OrganizationUsecase) GetOrganization(ctx context.Context, id uuid.UUID) (*response.OrganizationResponse, error) {
 	org, err := u.orgRepo.GetOrganization(ctx, id)
 	if err != nil {
 		return nil, err
@@ -82,7 +84,7 @@ func (u *OrganizationUsecase) CreateOrganization(ctx context.Context, req reques
 	}, nil
 }
 
-func (u *OrganizationUsecase) UpdateOrganization(ctx context.Context, id int64, req requests.UpdateOrganizationRequest) (*response.OrganizationResponse, error) {
+func (u *OrganizationUsecase) UpdateOrganization(ctx context.Context, id uuid.UUID, req requests.UpdateOrganizationRequest) (*response.OrganizationResponse, error) {
 	org, err := u.orgRepo.UpdateOrganization(ctx, db.UpdateOrganizationParams{
 		ID:          id,
 		Name:        req.Name,
@@ -103,6 +105,6 @@ func (u *OrganizationUsecase) UpdateOrganization(ctx context.Context, id int64, 
 	}, nil
 }
 
-func (u *OrganizationUsecase) DeleteOrganization(ctx context.Context, id int64) error {
+func (u *OrganizationUsecase) DeleteOrganization(ctx context.Context, id uuid.UUID) error {
 	return u.orgRepo.DeleteOrganization(ctx, id)
 }

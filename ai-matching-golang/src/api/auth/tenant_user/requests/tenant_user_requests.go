@@ -1,7 +1,9 @@
 package requests
 
+import "github.com/google/uuid"
+
 type AddUserToTenantRequest struct {
-	UserID int64  `json:"userId" validate:"required" doc:"User ID to add"`
+	UserID uuid.UUID `json:"userId" validate:"required" doc:"User ID to add"`
 	Role   string `json:"role" default:"member" doc:"Role of the user in the tenant"`
 }
 

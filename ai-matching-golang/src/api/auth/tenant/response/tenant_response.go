@@ -1,10 +1,14 @@
 package response
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type TenantResponse struct {
-	ID             int64     `json:"id" doc:"Tenant ID"`
-	OrganizationID int64     `json:"organizationId" doc:"Organization ID"`
+	ID             uuid.UUID `json:"id" doc:"Tenant ID"`
+	OrganizationID uuid.UUID `json:"organizationId" doc:"Organization ID"`
 	Name           string    `json:"name" doc:"Tenant name"`
 	Subdomain      string    `json:"subdomain" doc:"Tenant subdomain"`
 	IsActive       bool      `json:"isActive" doc:"Is tenant active"`

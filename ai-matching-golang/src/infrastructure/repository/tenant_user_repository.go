@@ -5,6 +5,7 @@ import (
 	"ai-matching/src/domain/interface/repository"
 	"context"
 	"database/sql"
+	"github.com/google/uuid"
 )
 
 type tenantUserRepository struct {
@@ -21,22 +22,22 @@ func (r *tenantUserRepository) AddUserToTenant(ctx context.Context, params db.Ad
 	return r.queries.AddUserToTenant(ctx, params)
 }
 
-func (r *tenantUserRepository) RemoveUserFromTenant(ctx context.Context, tenantID, userID int64) error {
+func (r *tenantUserRepository) RemoveUserFromTenant(ctx context.Context, tenantID, userID uuid.UUID) error {
 	return r.queries.RemoveUserFromTenant(ctx, db.RemoveUserFromTenantParams{
 		TenantID: tenantID,
 		UserID:   userID,
 	})
 }
 
-func (r *tenantUserRepository) GetUsersByTenant(ctx context.Context, tenantID int64) ([]db.User, error) {
+func (r *tenantUserRepository) GetUsersByTenant(ctx context.Context, tenantID uuid.UUID) ([]db.User, error) {
 	return r.queries.GetUsersByTenant(ctx, tenantID)
 }
 
-func (r *tenantUserRepository) GetTenantsByUser(ctx context.Context, userID int64) ([]db.Tenant, error) {
+func (r *tenantUserRepository) GetTenantsByUser(ctx context.Context, userID uuid.UUID) ([]db.Tenant, error) {
 	return r.queries.GetTenantsByUser(ctx, userID)
 }
 
-func (r *tenantUserRepository) GetTenantUser(ctx context.Context, tenantID, userID int64) (db.TenantUser, error) {
+func (r *tenantUserRepository) GetTenantUser(ctx context.Context, tenantID, userID uuid.UUID) (db.TenantUser, error) {
 	params := db.GetTenantUserParams{
 		TenantID: tenantID,
 		UserID:   userID,
@@ -44,7 +45,7 @@ func (r *tenantUserRepository) GetTenantUser(ctx context.Context, tenantID, user
 	return r.queries.GetTenantUser(ctx, params)
 }
 
-func (r *tenantUserRepository) UpdateUserRoleInTenant(ctx context.Context, tenantID, userID int64, role string) (db.TenantUser, error) {
+func (r *tenantUserRepository) UpdateUserRoleInTenant(ctx context.Context, tenantID, userID uuid.UUID, role string) (db.TenantUser, error) {
 	params := db.UpdateUserRoleInTenantParams{
 		TenantID: tenantID,
 		UserID:   userID,
@@ -53,6 +54,6 @@ func (r *tenantUserRepository) UpdateUserRoleInTenant(ctx context.Context, tenan
 	return r.queries.UpdateUserRoleInTenant(ctx, params)
 }
 
-func (r *tenantUserRepository) ListTenantUsers(ctx context.Context, tenantID int64) ([]db.ListTenantUsersRow, error) {
+func (r *tenantUserRepository) ListTenantUsers(ctx context.Context, tenantID uuid.UUID) ([]db.ListTenantUsersRow, error) {
 	return r.queries.ListTenantUsers(ctx, tenantID)
 }

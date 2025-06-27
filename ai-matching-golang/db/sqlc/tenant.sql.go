@@ -9,18 +9,20 @@ import (
 	"context"
 	"database/sql"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const checkUserBelongsToTenant = `-- name: CheckUserBelongsToTenant :one
 SELECT EXISTS(
     SELECT 1 FROM tenant_users
-    WHERE tenant_id = $1 AND user_id = $2
+    WHERE tenant_id = $1::uuid AND user_id = $2::uuid
 ) as belongs
 `
 
 type CheckUserBelongsToTenantParams struct {
-	TenantID int64 `json:"tenant_id"`
-	UserID   int64 `json:"user_id"`
+	TenantID uuid.UUID `json:"tenant_id"`
+	UserID   uuid.UUID `json:"user_id"`
 }
 
 func (q *Queries) CheckUserBelongsToTenant(ctx context.Context, arg CheckUserBelongsToTenantParams) (bool, error) {
@@ -34,16 +36,16 @@ const createTenant = `-- name: CreateTenant :one
 INSERT INTO tenants (
     organization_id, name, subdomain, is_active
 ) VALUES (
-    $1, $2, $3, $4
+    $1::uuid, $2, $3, $4
 )
 RETURNING id, organization_id, name, subdomain, is_active, created_at, updated_at
 `
 
 type CreateTenantParams struct {
-	OrganizationID int64  `json:"organization_id"`
-	Name           string `json:"name"`
-	Subdomain      string `json:"subdomain"`
-	IsActive       bool   `json:"is_active"`
+	OrganizationID uuid.UUID `json:"organization_id"`
+	Name           string    `json:"name"`
+	Subdomain      string    `json:"subdomain"`
+	IsActive       bool      `json:"is_active"`
 }
 
 func (q *Queries) CreateTenant(ctx context.Context, arg CreateTenantParams) (Tenant, error) {
@@ -68,20 +70,20 @@ func (q *Queries) CreateTenant(ctx context.Context, arg CreateTenantParams) (Ten
 
 const deleteTenant = `-- name: DeleteTenant :exec
 DELETE FROM tenants
-WHERE id = $1
+WHERE id = $1::uuid
 `
 
-func (q *Queries) DeleteTenant(ctx context.Context, id int64) error {
+func (q *Queries) DeleteTenant(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, deleteTenant, id)
 	return err
 }
 
 const getTenant = `-- name: GetTenant :one
 SELECT id, organization_id, name, subdomain, is_active, created_at, updated_at FROM tenants
-WHERE id = $1 LIMIT 1
+WHERE id = $1::uuid LIMIT 1
 `
 
-func (q *Queries) GetTenant(ctx context.Context, id int64) (Tenant, error) {
+func (q *Queries) GetTenant(ctx context.Context, id uuid.UUID) (Tenant, error) {
 	row := q.db.QueryRowContext(ctx, getTenant, id)
 	var i Tenant
 	err := row.Scan(
@@ -123,13 +125,13 @@ SELECT
     COUNT(DISTINCT tu.user_id) as user_count
 FROM tenants t
 LEFT JOIN tenant_users tu ON t.id = tu.tenant_id
-WHERE t.id = $1
+WHERE t.id = $1::uuid
 GROUP BY t.id
 `
 
 type GetTenantWithUserCountRow struct {
-	ID             int64     `json:"id"`
-	OrganizationID int64     `json:"organization_id"`
+	ID             uuid.UUID `json:"id"`
+	OrganizationID uuid.UUID `json:"organization_id"`
 	Name           string    `json:"name"`
 	Subdomain      string    `json:"subdomain"`
 	IsActive       bool      `json:"is_active"`
@@ -138,7 +140,7 @@ type GetTenantWithUserCountRow struct {
 	UserCount      int64     `json:"user_count"`
 }
 
-func (q *Queries) GetTenantWithUserCount(ctx context.Context, id int64) (GetTenantWithUserCountRow, error) {
+func (q *Queries) GetTenantWithUserCount(ctx context.Context, id uuid.UUID) (GetTenantWithUserCountRow, error) {
 	row := q.db.QueryRowContext(ctx, getTenantWithUserCount, id)
 	var i GetTenantWithUserCountRow
 	err := row.Scan(
@@ -158,13 +160,13 @@ const getTenantsByUserID = `-- name: GetTenantsByUserID :many
 SELECT t.id, t.organization_id, t.name, t.subdomain, t.is_active, t.created_at, t.updated_at, tu.role
 FROM tenants t
 INNER JOIN tenant_users tu ON t.id = tu.tenant_id
-WHERE tu.user_id = $1 AND t.is_active = true
+WHERE tu.user_id = $1::uuid AND t.is_active = true
 ORDER BY t.name
 `
 
 type GetTenantsByUserIDRow struct {
-	ID             int64          `json:"id"`
-	OrganizationID int64          `json:"organization_id"`
+	ID             uuid.UUID      `json:"id"`
+	OrganizationID uuid.UUID      `json:"organization_id"`
 	Name           string         `json:"name"`
 	Subdomain      string         `json:"subdomain"`
 	IsActive       bool           `json:"is_active"`
@@ -173,7 +175,7 @@ type GetTenantsByUserIDRow struct {
 	Role           sql.NullString `json:"role"`
 }
 
-func (q *Queries) GetTenantsByUserID(ctx context.Context, userID int64) ([]GetTenantsByUserIDRow, error) {
+func (q *Queries) GetTenantsByUserID(ctx context.Context, userID uuid.UUID) ([]GetTenantsByUserIDRow, error) {
 	rows, err := q.db.QueryContext(ctx, getTenantsByUserID, userID)
 	if err != nil {
 		return nil, err
@@ -207,19 +209,19 @@ func (q *Queries) GetTenantsByUserID(ctx context.Context, userID int64) ([]GetTe
 
 const listTenantsByOrganization = `-- name: ListTenantsByOrganization :many
 SELECT id, organization_id, name, subdomain, is_active, created_at, updated_at FROM tenants
-WHERE organization_id = $1 AND is_active = true
+WHERE organization_id = $3::uuid AND is_active = true
 ORDER BY id
-LIMIT $2 OFFSET $3
+    LIMIT $1 OFFSET $2
 `
 
 type ListTenantsByOrganizationParams struct {
-	OrganizationID int64 `json:"organization_id"`
-	Limit          int32 `json:"limit"`
-	Offset         int32 `json:"offset"`
+	Limit          int32     `json:"limit"`
+	Offset         int32     `json:"offset"`
+	OrganizationID uuid.UUID `json:"organization_id"`
 }
 
 func (q *Queries) ListTenantsByOrganization(ctx context.Context, arg ListTenantsByOrganizationParams) ([]Tenant, error) {
-	rows, err := q.db.QueryContext(ctx, listTenantsByOrganization, arg.OrganizationID, arg.Limit, arg.Offset)
+	rows, err := q.db.QueryContext(ctx, listTenantsByOrganization, arg.Limit, arg.Offset, arg.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -251,27 +253,27 @@ func (q *Queries) ListTenantsByOrganization(ctx context.Context, arg ListTenants
 
 const updateTenant = `-- name: UpdateTenant :one
 UPDATE tenants
-SET name = $2,
-    subdomain = $3,
-    is_active = $4,
+SET name = $1,
+    subdomain = $2,
+    is_active = $3,
     updated_at = NOW()
-WHERE id = $1
+WHERE id = $4::uuid
 RETURNING id, organization_id, name, subdomain, is_active, created_at, updated_at
 `
 
 type UpdateTenantParams struct {
-	ID        int64  `json:"id"`
-	Name      string `json:"name"`
-	Subdomain string `json:"subdomain"`
-	IsActive  bool   `json:"is_active"`
+	Name      string    `json:"name"`
+	Subdomain string    `json:"subdomain"`
+	IsActive  bool      `json:"is_active"`
+	ID        uuid.UUID `json:"id"`
 }
 
 func (q *Queries) UpdateTenant(ctx context.Context, arg UpdateTenantParams) (Tenant, error) {
 	row := q.db.QueryRowContext(ctx, updateTenant,
-		arg.ID,
 		arg.Name,
 		arg.Subdomain,
 		arg.IsActive,
+		arg.ID,
 	)
 	var i Tenant
 	err := row.Scan(

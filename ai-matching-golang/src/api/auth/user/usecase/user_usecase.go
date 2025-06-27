@@ -4,25 +4,33 @@ import (
 	"ai-matching/db/sqlc"
 	"ai-matching/src/api/auth/user/requests"
 	"ai-matching/src/api/auth/user/response"
+	"ai-matching/src/domain/interface/external"
 	"ai-matching/src/domain/interface/repository"
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider/types"
+	"github.com/google/uuid"
 )
 
 type UserUsecase struct {
 	userRepo       repository.UserRepository
 	tenantUserRepo repository.TenantUserRepository
+	cognitoClient  external.CognitoClient
 }
 
-func NewUserUsecase(userRepo repository.UserRepository, tenantUserRepo repository.TenantUserRepository) *UserUsecase {
+func NewUserUsecase(userRepo repository.UserRepository, tenantUserRepo repository.TenantUserRepository, cognitoClient external.CognitoClient) *UserUsecase {
 	return &UserUsecase{
 		userRepo:       userRepo,
 		tenantUserRepo: tenantUserRepo,
+		cognitoClient:  cognitoClient,
 	}
 }
 
-func (u *UserUsecase) GetUser(ctx context.Context, id int64) (*response.UserResponse, error) {
+func (u *UserUsecase) GetUser(ctx context.Context, id uuid.UUID) (*response.UserResponse, error) {
 	user, err := u.userRepo.GetUser(ctx, id)
 	if err != nil {
 		return nil, err
@@ -112,15 +120,38 @@ func (u *UserUsecase) ListUsers(ctx context.Context, page, pageSize int) (*respo
 }
 
 func (u *UserUsecase) CreateUser(ctx context.Context, req requests.CreateUserRequest) (*response.UserResponse, error) {
-	// Create user with cognito ID
+	// First, create user in Cognito
+	attributes := map[string]string{
+		"email":       req.Email,
+		"given_name":  req.FirstName,
+		"family_name": req.LastName,
+	}
+
+	signUpResult, err := u.cognitoClient.SignUp(ctx, req.Email, req.Password, attributes)
+	if err != nil {
+		if awsErr, ok := err.(*types.UsernameExistsException); ok {
+			_ = awsErr
+			return nil, errors.New("user already exists")
+		}
+		if awsErr, ok := err.(*types.InvalidPasswordException); ok {
+			_ = awsErr
+			return nil, errors.New("password does not meet requirements")
+		}
+		return nil, fmt.Errorf("failed to create user in Cognito: %w", err)
+	}
+
+	// Extract Cognito user ID
+	cognitoUserID := aws.ToString(signUpResult.UserSub)
+
+	// Create user in database with cognito ID
 	user, err := u.userRepo.CreateUser(ctx, db.CreateUserParams{
-		CognitoID: req.CognitoID,
+		CognitoID: cognitoUserID,
 		Email:     req.Email,
 		FirstName: sql.NullString{String: req.FirstName, Valid: true},
 		LastName:  sql.NullString{String: req.LastName, Valid: true},
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create user in database: %w", err)
 	}
 
 	var tenantInfos []response.TenantInfo
@@ -166,7 +197,7 @@ func (u *UserUsecase) CreateUser(ctx context.Context, req requests.CreateUserReq
 	}, nil
 }
 
-func (u *UserUsecase) UpdateUser(ctx context.Context, id int64, req requests.UpdateUserRequest) (*response.UserResponse, error) {
+func (u *UserUsecase) UpdateUser(ctx context.Context, id uuid.UUID, req requests.UpdateUserRequest) (*response.UserResponse, error) {
 	user, err := u.userRepo.UpdateUser(ctx, db.UpdateUserParams{
 		ID:        id,
 		Email:     req.Email,
@@ -210,6 +241,6 @@ func (u *UserUsecase) UpdateUser(ctx context.Context, id int64, req requests.Upd
 	}, nil
 }
 
-func (u *UserUsecase) DeleteUser(ctx context.Context, id int64) error {
+func (u *UserUsecase) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	return u.userRepo.DeleteUser(ctx, id)
 }

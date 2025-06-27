@@ -5,6 +5,8 @@ import (
 	"ai-matching/src/api/auth/tenant_user/response"
 	"ai-matching/src/api/auth/tenant_user/usecase"
 	"context"
+
+	"github.com/google/uuid"
 )
 
 type TenantUserController struct {
@@ -18,7 +20,7 @@ func NewTenantUserController(tenantUserUsecase *usecase.TenantUserUsecase) *Tena
 }
 
 type AddUserToTenantInput struct {
-	TenantID int64                          `path:"tenantId" doc:"Tenant ID"`
+	TenantID uuid.UUID                      `path:"tenantId" doc:"Tenant ID"`
 	Body     requests.AddUserToTenantRequest `doc:"Add user to tenant request"`
 }
 
@@ -40,8 +42,8 @@ func (c *TenantUserController) AddUserToTenant(ctx context.Context, input *AddUs
 }
 
 type RemoveUserFromTenantInput struct {
-	TenantID int64 `path:"tenantId" doc:"Tenant ID"`
-	UserID   int64 `path:"userId" doc:"User ID"`
+	TenantID uuid.UUID `path:"tenantId" doc:"Tenant ID"`
+	UserID   uuid.UUID `path:"userId" doc:"User ID"`
 }
 
 type RemoveUserFromTenantOutput struct {
@@ -62,7 +64,7 @@ func (c *TenantUserController) RemoveUserFromTenant(ctx context.Context, input *
 }
 
 type GetTenantUsersInput struct {
-	TenantID int64 `path:"tenantId" doc:"Tenant ID"`
+	TenantID uuid.UUID `path:"tenantId" doc:"Tenant ID"`
 }
 
 type GetTenantUsersOutput struct {
@@ -94,7 +96,7 @@ func (c *TenantUserController) GetTenantUsers(ctx context.Context, input *GetTen
 }
 
 type GetUserTenantsInput struct {
-	UserID int64 `path:"userId" doc:"User ID"`
+	UserID uuid.UUID `path:"userId" doc:"User ID"`
 }
 
 type GetUserTenantsOutput struct {
@@ -124,8 +126,8 @@ func (c *TenantUserController) GetUserTenants(ctx context.Context, input *GetUse
 }
 
 type UpdateUserRoleInput struct {
-	TenantID int64                       `path:"tenantId" doc:"Tenant ID"`
-	UserID   int64                       `path:"userId" doc:"User ID"`
+	TenantID uuid.UUID                   `path:"tenantId" doc:"Tenant ID"`
+	UserID   uuid.UUID                   `path:"userId" doc:"User ID"`
 	Body     requests.UpdateUserRoleRequest `doc:"Update user role request"`
 }
 
@@ -147,9 +149,9 @@ func (c *TenantUserController) UpdateUserRole(ctx context.Context, input *Update
 }
 
 type GetUsersNotInTenantInput struct {
-	TenantID int64 `path:"tenantId" doc:"Tenant ID"`
-	Page     int   `query:"page" default:"1" doc:"Page number"`
-	PageSize int   `query:"pageSize" default:"20" doc:"Page size"`
+	TenantID uuid.UUID `path:"tenantId" doc:"Tenant ID"`
+	Page     int       `query:"page" default:"1" doc:"Page number"`
+	PageSize int       `query:"pageSize" default:"20" doc:"Page size"`
 }
 
 type GetUsersNotInTenantOutput struct {

@@ -9,20 +9,22 @@ import (
 	"context"
 	"database/sql"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const addUserToTenant = `-- name: AddUserToTenant :one
 INSERT INTO tenant_users (
     tenant_id, user_id, role
 ) VALUES (
-    $1, $2, $3
+    $1::uuid, $2::uuid, $3
 )
 RETURNING id, tenant_id, user_id, role, created_at, updated_at
 `
 
 type AddUserToTenantParams struct {
-	TenantID int64          `json:"tenant_id"`
-	UserID   int64          `json:"user_id"`
+	TenantID uuid.UUID      `json:"tenant_id"`
+	UserID   uuid.UUID      `json:"user_id"`
 	Role     sql.NullString `json:"role"`
 }
 
@@ -42,13 +44,13 @@ func (q *Queries) AddUserToTenant(ctx context.Context, arg AddUserToTenantParams
 
 const getTenantUser = `-- name: GetTenantUser :one
 SELECT id, tenant_id, user_id, role, created_at, updated_at FROM tenant_users
-WHERE tenant_id = $1 AND user_id = $2
+WHERE tenant_id = $1::uuid AND user_id = $2::uuid
 LIMIT 1
 `
 
 type GetTenantUserParams struct {
-	TenantID int64 `json:"tenant_id"`
-	UserID   int64 `json:"user_id"`
+	TenantID uuid.UUID `json:"tenant_id"`
+	UserID   uuid.UUID `json:"user_id"`
 }
 
 func (q *Queries) GetTenantUser(ctx context.Context, arg GetTenantUserParams) (TenantUser, error) {
@@ -68,11 +70,11 @@ func (q *Queries) GetTenantUser(ctx context.Context, arg GetTenantUserParams) (T
 const getTenantsByUser = `-- name: GetTenantsByUser :many
 SELECT t.id, t.organization_id, t.name, t.subdomain, t.is_active, t.created_at, t.updated_at FROM tenants t
 INNER JOIN tenant_users tu ON t.id = tu.tenant_id
-WHERE tu.user_id = $1
+WHERE tu.user_id = $1::uuid
 ORDER BY t.name
 `
 
-func (q *Queries) GetTenantsByUser(ctx context.Context, userID int64) ([]Tenant, error) {
+func (q *Queries) GetTenantsByUser(ctx context.Context, userID uuid.UUID) ([]Tenant, error) {
 	rows, err := q.db.QueryContext(ctx, getTenantsByUser, userID)
 	if err != nil {
 		return nil, err
@@ -106,11 +108,11 @@ func (q *Queries) GetTenantsByUser(ctx context.Context, userID int64) ([]Tenant,
 const getUsersByTenant = `-- name: GetUsersByTenant :many
 SELECT u.id, u.cognito_id, u.email, u.first_name, u.last_name, u.created_at, u.updated_at FROM users u
 INNER JOIN tenant_users tu ON u.id = tu.user_id
-WHERE tu.tenant_id = $1
+WHERE tu.tenant_id = $1::uuid
 ORDER BY u.email
 `
 
-func (q *Queries) GetUsersByTenant(ctx context.Context, tenantID int64) ([]User, error) {
+func (q *Queries) GetUsersByTenant(ctx context.Context, tenantID uuid.UUID) ([]User, error) {
 	rows, err := q.db.QueryContext(ctx, getUsersByTenant, tenantID)
 	if err != nil {
 		return nil, err
@@ -149,14 +151,14 @@ SELECT
     u.last_name
 FROM tenant_users tu
 INNER JOIN users u ON tu.user_id = u.id
-WHERE tu.tenant_id = $1
+WHERE tu.tenant_id = $1::uuid
 ORDER BY u.email
 `
 
 type ListTenantUsersRow struct {
-	ID        int64          `json:"id"`
-	TenantID  int64          `json:"tenant_id"`
-	UserID    int64          `json:"user_id"`
+	ID        uuid.UUID      `json:"id"`
+	TenantID  uuid.UUID      `json:"tenant_id"`
+	UserID    uuid.UUID      `json:"user_id"`
 	Role      sql.NullString `json:"role"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
@@ -165,7 +167,7 @@ type ListTenantUsersRow struct {
 	LastName  sql.NullString `json:"last_name"`
 }
 
-func (q *Queries) ListTenantUsers(ctx context.Context, tenantID int64) ([]ListTenantUsersRow, error) {
+func (q *Queries) ListTenantUsers(ctx context.Context, tenantID uuid.UUID) ([]ListTenantUsersRow, error) {
 	rows, err := q.db.QueryContext(ctx, listTenantUsers, tenantID)
 	if err != nil {
 		return nil, err
@@ -200,12 +202,12 @@ func (q *Queries) ListTenantUsers(ctx context.Context, tenantID int64) ([]ListTe
 
 const removeUserFromTenant = `-- name: RemoveUserFromTenant :exec
 DELETE FROM tenant_users
-WHERE tenant_id = $1 AND user_id = $2
+WHERE tenant_id = $1::uuid AND user_id = $2::uuid
 `
 
 type RemoveUserFromTenantParams struct {
-	TenantID int64 `json:"tenant_id"`
-	UserID   int64 `json:"user_id"`
+	TenantID uuid.UUID `json:"tenant_id"`
+	UserID   uuid.UUID `json:"user_id"`
 }
 
 func (q *Queries) RemoveUserFromTenant(ctx context.Context, arg RemoveUserFromTenantParams) error {
@@ -215,20 +217,20 @@ func (q *Queries) RemoveUserFromTenant(ctx context.Context, arg RemoveUserFromTe
 
 const updateUserRoleInTenant = `-- name: UpdateUserRoleInTenant :one
 UPDATE tenant_users
-SET role = $3,
+SET role = $1,
     updated_at = NOW()
-WHERE tenant_id = $1 AND user_id = $2
+WHERE tenant_id = $2::uuid AND user_id = $3::uuid
 RETURNING id, tenant_id, user_id, role, created_at, updated_at
 `
 
 type UpdateUserRoleInTenantParams struct {
-	TenantID int64          `json:"tenant_id"`
-	UserID   int64          `json:"user_id"`
 	Role     sql.NullString `json:"role"`
+	TenantID uuid.UUID      `json:"tenant_id"`
+	UserID   uuid.UUID      `json:"user_id"`
 }
 
 func (q *Queries) UpdateUserRoleInTenant(ctx context.Context, arg UpdateUserRoleInTenantParams) (TenantUser, error) {
-	row := q.db.QueryRowContext(ctx, updateUserRoleInTenant, arg.TenantID, arg.UserID, arg.Role)
+	row := q.db.QueryRowContext(ctx, updateUserRoleInTenant, arg.Role, arg.TenantID, arg.UserID)
 	var i TenantUser
 	err := row.Scan(
 		&i.ID,

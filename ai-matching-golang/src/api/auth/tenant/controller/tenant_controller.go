@@ -5,6 +5,8 @@ import (
 	"ai-matching/src/api/auth/tenant/response"
 	"ai-matching/src/api/auth/tenant/usecase"
 	"context"
+
+	"github.com/google/uuid"
 )
 
 type TenantController struct {
@@ -18,7 +20,7 @@ func NewTenantController(tenantUsecase *usecase.TenantUsecase) *TenantController
 }
 
 type GetTenantInput struct {
-	ID int64 `path:"id" doc:"Tenant ID"`
+	ID uuid.UUID `path:"id" doc:"Tenant ID"`
 }
 
 type GetTenantOutput struct {
@@ -52,9 +54,9 @@ func (c *TenantController) GetTenantBySubdomain(ctx context.Context, input *GetT
 }
 
 type ListTenantsByOrganizationInput struct {
-	OrganizationID int64 `path:"organizationId" doc:"Organization ID"`
-	Page           int   `query:"page" default:"1" doc:"Page number"`
-	PageSize       int   `query:"pageSize" default:"10" doc:"Page size"`
+	OrganizationID uuid.UUID `path:"organizationId" doc:"Organization ID"`
+	Page           int       `query:"page" default:"1" doc:"Page number"`
+	PageSize       int       `query:"pageSize" default:"10" doc:"Page size"`
 }
 
 type ListTenantsByOrganizationOutput struct {
@@ -88,7 +90,7 @@ func (c *TenantController) CreateTenant(ctx context.Context, input *CreateTenant
 }
 
 type UpdateTenantInput struct {
-	ID   int64 `path:"id" doc:"Tenant ID"`
+	ID   uuid.UUID `path:"id" doc:"Tenant ID"`
 	Body requests.UpdateTenantRequest
 }
 
@@ -106,7 +108,7 @@ func (c *TenantController) UpdateTenant(ctx context.Context, input *UpdateTenant
 }
 
 type DeleteTenantInput struct {
-	ID int64 `path:"id" doc:"Tenant ID"`
+	ID uuid.UUID `path:"id" doc:"Tenant ID"`
 }
 
 type DeleteTenantOutput struct {

@@ -6,6 +6,8 @@ package db
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
 type Querier interface {
@@ -14,27 +16,27 @@ type Querier interface {
 	CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error)
 	CreateTenant(ctx context.Context, arg CreateTenantParams) (Tenant, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
-	DeleteOrganization(ctx context.Context, id int64) error
-	DeleteTenant(ctx context.Context, id int64) error
-	DeleteUser(ctx context.Context, id int64) error
-	GetOrganization(ctx context.Context, id int64) (Organization, error)
-	GetOrganizationByTenant(ctx context.Context, id int64) (Organization, error)
-	GetOrganizationWithTenants(ctx context.Context, id int64) (GetOrganizationWithTenantsRow, error)
-	GetTenant(ctx context.Context, id int64) (Tenant, error)
+	DeleteOrganization(ctx context.Context, id uuid.UUID) error
+	DeleteTenant(ctx context.Context, id uuid.UUID) error
+	DeleteUser(ctx context.Context, id uuid.UUID) error
+	GetOrganization(ctx context.Context, id uuid.UUID) (Organization, error)
+	GetOrganizationByTenant(ctx context.Context, tenantID uuid.UUID) (Organization, error)
+	GetOrganizationWithTenants(ctx context.Context, id uuid.UUID) (GetOrganizationWithTenantsRow, error)
+	GetTenant(ctx context.Context, id uuid.UUID) (Tenant, error)
 	GetTenantBySubdomain(ctx context.Context, subdomain string) (Tenant, error)
 	GetTenantUser(ctx context.Context, arg GetTenantUserParams) (TenantUser, error)
-	GetTenantWithUserCount(ctx context.Context, id int64) (GetTenantWithUserCountRow, error)
-	GetTenantsByOrganization(ctx context.Context, organizationID int64) ([]Tenant, error)
-	GetTenantsByUser(ctx context.Context, userID int64) ([]Tenant, error)
-	GetTenantsByUserID(ctx context.Context, userID int64) ([]GetTenantsByUserIDRow, error)
-	GetUser(ctx context.Context, id int64) (User, error)
+	GetTenantWithUserCount(ctx context.Context, id uuid.UUID) (GetTenantWithUserCountRow, error)
+	GetTenantsByOrganization(ctx context.Context, organizationID uuid.UUID) ([]Tenant, error)
+	GetTenantsByUser(ctx context.Context, userID uuid.UUID) ([]Tenant, error)
+	GetTenantsByUserID(ctx context.Context, userID uuid.UUID) ([]GetTenantsByUserIDRow, error)
+	GetUser(ctx context.Context, id uuid.UUID) (User, error)
 	GetUserByCognitoID(ctx context.Context, cognitoID string) (User, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
-	GetUserWithTenants(ctx context.Context, id int64) (GetUserWithTenantsRow, error)
-	GetUsersByTenant(ctx context.Context, tenantID int64) ([]User, error)
+	GetUserWithTenants(ctx context.Context, id uuid.UUID) (GetUserWithTenantsRow, error)
+	GetUsersByTenant(ctx context.Context, tenantID uuid.UUID) ([]User, error)
 	GetUsersNotInTenant(ctx context.Context, arg GetUsersNotInTenantParams) ([]User, error)
 	ListOrganizations(ctx context.Context, arg ListOrganizationsParams) ([]Organization, error)
-	ListTenantUsers(ctx context.Context, tenantID int64) ([]ListTenantUsersRow, error)
+	ListTenantUsers(ctx context.Context, tenantID uuid.UUID) ([]ListTenantUsersRow, error)
 	ListTenantsByOrganization(ctx context.Context, arg ListTenantsByOrganizationParams) ([]Tenant, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
 	RemoveUserFromTenant(ctx context.Context, arg RemoveUserFromTenantParams) error

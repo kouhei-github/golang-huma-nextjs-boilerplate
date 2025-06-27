@@ -286,20 +286,6 @@ func (u *AuthUsecase) ConfirmForgotPassword(ctx context.Context, email, password
 	return nil
 }
 
-func nullInt64ToPtr(n sql.NullInt64) *int64 {
-	if n.Valid {
-		return &n.Int64
-	}
-	return nil
-}
-
-func ptrToNullInt64(p *int64) sql.NullInt64 {
-	if p != nil {
-		return sql.NullInt64{Int64: *p, Valid: true}
-	}
-	return sql.NullInt64{}
-}
-
 // extractSubFromIDToken extracts the sub claim (Cognito User ID) from the ID token
 func extractSubFromIDToken(idToken string) (string, error) {
 	// Parse the token without validation (validation is done by Cognito)

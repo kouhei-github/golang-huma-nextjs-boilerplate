@@ -4,6 +4,7 @@ import (
 	"ai-matching/db/sqlc"
 	"ai-matching/src/domain/interface/repository"
 	"context"
+	"github.com/google/uuid"
 )
 
 type organizationRepository struct {
@@ -16,7 +17,7 @@ func NewOrganizationRepository(queries db.Querier) repository.OrganizationReposi
 	}
 }
 
-func (r *organizationRepository) GetOrganization(ctx context.Context, id int64) (db.Organization, error) {
+func (r *organizationRepository) GetOrganization(ctx context.Context, id uuid.UUID) (db.Organization, error) {
 	return r.queries.GetOrganization(ctx, id)
 }
 
@@ -36,20 +37,20 @@ func (r *organizationRepository) UpdateOrganization(ctx context.Context, params 
 	return r.queries.UpdateOrganization(ctx, params)
 }
 
-func (r *organizationRepository) DeleteOrganization(ctx context.Context, id int64) error {
+func (r *organizationRepository) DeleteOrganization(ctx context.Context, id uuid.UUID) error {
 	return r.queries.DeleteOrganization(ctx, id)
 }
 
 // Relationship methods
 
-func (r *organizationRepository) GetOrganizationWithTenants(ctx context.Context, id int64) (db.GetOrganizationWithTenantsRow, error) {
+func (r *organizationRepository) GetOrganizationWithTenants(ctx context.Context, id uuid.UUID) (db.GetOrganizationWithTenantsRow, error) {
 	return r.queries.GetOrganizationWithTenants(ctx, id)
 }
 
-func (r *organizationRepository) GetTenantsByOrganization(ctx context.Context, organizationID int64) ([]db.Tenant, error) {
+func (r *organizationRepository) GetTenantsByOrganization(ctx context.Context, organizationID uuid.UUID) ([]db.Tenant, error) {
 	return r.queries.GetTenantsByOrganization(ctx, organizationID)
 }
 
-func (r *organizationRepository) GetOrganizationByTenant(ctx context.Context, tenantID int64) (db.Organization, error) {
+func (r *organizationRepository) GetOrganizationByTenant(ctx context.Context, tenantID uuid.UUID) (db.Organization, error) {
 	return r.queries.GetOrganizationByTenant(ctx, tenantID)
 }

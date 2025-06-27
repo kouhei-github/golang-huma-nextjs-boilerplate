@@ -30,13 +30,13 @@ type JWKKey struct {
 }
 
 type CognitoJWTValidator struct {
-	userPoolID   string
-	clientID     string
-	region       string
-	jwksURL      string
-	jwkSet       *JWK
-	jwkSetMutex  sync.RWMutex
-	lastFetched  time.Time
+	userPoolID    string
+	clientID      string
+	region        string
+	jwksURL       string
+	jwkSet        *JWK
+	jwkSetMutex   sync.RWMutex
+	lastFetched   time.Time
 	cacheDuration time.Duration
 }
 
@@ -115,7 +115,17 @@ func (v *CognitoJWTValidator) validateClaims(claims jwt.MapClaims) error {
 
 	expectedIss := fmt.Sprintf("https://cognito-idp.%s.amazonaws.com/%s", v.region, v.userPoolID)
 	if v.jwksURL != "" && v.jwksURL[:4] == "http" && v.jwksURL[:8] != "https://" {
-		expectedIss = fmt.Sprintf("http://cognito-local:9229/%s", v.userPoolID)
+		// For local development, accept both cognito-local and 0.0.0.0 as valid hosts
+		expectedIssLocal := fmt.Sprintf("http://cognito-local:9229/%s", v.userPoolID)
+		expectedIssLocalhost := fmt.Sprintf("http://0.0.0.0:9229/%s", v.userPoolID)
+		expectedIss127 := fmt.Sprintf("http://127.0.0.1:9229/%s", v.userPoolID)
+		expectedIssLocalhost2 := fmt.Sprintf("http://localhost:9229/%s", v.userPoolID)
+
+		if iss != expectedIssLocal && iss != expectedIssLocalhost && iss != expectedIss127 && iss != expectedIssLocalhost2 {
+			return fmt.Errorf("invalid issuer: expected one of [%s, %s, %s, %s], got %s",
+				expectedIssLocal, expectedIssLocalhost, expectedIss127, expectedIssLocalhost2, iss)
+		}
+		return nil
 	}
 
 	if iss != expectedIss {
@@ -240,19 +250,19 @@ func (v *CognitoJWTValidator) GetUserInfoFromToken(token *jwt.Token) (map[string
 	}
 
 	userInfo := make(map[string]interface{})
-	
+
 	if sub, ok := claims["sub"].(string); ok {
 		userInfo["user_id"] = sub
 	}
-	
+
 	if email, ok := claims["email"].(string); ok {
 		userInfo["email"] = email
 	}
-	
+
 	if username, ok := claims["cognito:username"].(string); ok {
 		userInfo["username"] = username
 	}
-	
+
 	if groups, ok := claims["cognito:groups"].([]interface{}); ok {
 		userInfo["groups"] = groups
 	}

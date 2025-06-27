@@ -1,6 +1,10 @@
 package response
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type AuthResponse struct {
 	AccessToken          string    `json:"accessToken,omitempty" doc:"JWT access token"`
@@ -14,9 +18,9 @@ type AuthResponse struct {
 }
 
 type UserInfo struct {
-	ID        int64    `json:"id" doc:"User ID"`
-	Email     string   `json:"email" doc:"User email"`
-	FirstName string   `json:"firstName" doc:"User first name"`
-	LastName  string   `json:"lastName" doc:"User last name"`
-	Tenants   []string `json:"tenants,omitempty" doc:"List of tenant names user belongs to"`
+	ID        uuid.UUID `json:"id" doc:"User ID"`
+	Email     string    `json:"email" doc:"User email"`
+	FirstName string    `json:"firstName" doc:"User first name"`
+	LastName  string    `json:"lastName" doc:"User last name"`
+	Tenants   []string  `json:"tenants,omitempty" doc:"List of tenant names user belongs to"`
 }

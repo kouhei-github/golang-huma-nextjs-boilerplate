@@ -9,15 +9,17 @@ import (
 	"context"
 	"database/sql"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
     cognito_id, email, first_name, last_name
 ) VALUES (
-    $1, $2, $3, $4
-)
-RETURNING id, cognito_id, email, first_name, last_name, created_at, updated_at
+             $1, $2, $3, $4
+         )
+    RETURNING id, cognito_id, email, first_name, last_name, created_at, updated_at
 `
 
 type CreateUserParams struct {
@@ -49,20 +51,20 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 
 const deleteUser = `-- name: DeleteUser :exec
 DELETE FROM users
-WHERE id = $1
+WHERE id = $1::uuid
 `
 
-func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
+func (q *Queries) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, deleteUser, id)
 	return err
 }
 
 const getUser = `-- name: GetUser :one
 SELECT id, cognito_id, email, first_name, last_name, created_at, updated_at FROM users
-WHERE id = $1 LIMIT 1
+WHERE id = $1::uuid LIMIT 1
 `
 
-func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
+func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (User, error) {
 	row := q.db.QueryRowContext(ctx, getUser, id)
 	var i User
 	err := row.Scan(
@@ -118,17 +120,17 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserWithTenants = `-- name: GetUserWithTenants :one
-SELECT 
+SELECT
     u.id, u.cognito_id, u.email, u.first_name, u.last_name, u.created_at, u.updated_at,
     COUNT(DISTINCT tu.tenant_id) as tenant_count
 FROM users u
-LEFT JOIN tenant_users tu ON u.id = tu.user_id
-WHERE u.id = $1
+         LEFT JOIN tenant_users tu ON u.id = tu.user_id
+WHERE u.id = $1::uuid
 GROUP BY u.id
 `
 
 type GetUserWithTenantsRow struct {
-	ID          int64          `json:"id"`
+	ID          uuid.UUID      `json:"id"`
 	CognitoID   string         `json:"cognito_id"`
 	Email       string         `json:"email"`
 	FirstName   sql.NullString `json:"first_name"`
@@ -138,7 +140,7 @@ type GetUserWithTenantsRow struct {
 	TenantCount int64          `json:"tenant_count"`
 }
 
-func (q *Queries) GetUserWithTenants(ctx context.Context, id int64) (GetUserWithTenantsRow, error) {
+func (q *Queries) GetUserWithTenants(ctx context.Context, id uuid.UUID) (GetUserWithTenantsRow, error) {
 	row := q.db.QueryRowContext(ctx, getUserWithTenants, id)
 	var i GetUserWithTenantsRow
 	err := row.Scan(
@@ -165,9 +167,9 @@ LIMIT $2 OFFSET $3
 `
 
 type GetUsersNotInTenantParams struct {
-	TenantID int64 `json:"tenant_id"`
-	Limit    int32 `json:"limit"`
-	Offset   int32 `json:"offset"`
+	TenantID uuid.UUID `json:"tenant_id"`
+	Limit    int32     `json:"limit"`
+	Offset   int32     `json:"offset"`
 }
 
 func (q *Queries) GetUsersNotInTenant(ctx context.Context, arg GetUsersNotInTenantParams) ([]User, error) {
@@ -245,27 +247,27 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 
 const updateUser = `-- name: UpdateUser :one
 UPDATE users
-SET email = $2,
-    first_name = $3,
-    last_name = $4,
+SET email = $1,
+    first_name = $2,
+    last_name = $3,
     updated_at = NOW()
-WHERE id = $1
+WHERE id = $4::uuid
 RETURNING id, cognito_id, email, first_name, last_name, created_at, updated_at
 `
 
 type UpdateUserParams struct {
-	ID        int64          `json:"id"`
 	Email     string         `json:"email"`
 	FirstName sql.NullString `json:"first_name"`
 	LastName  sql.NullString `json:"last_name"`
+	ID        uuid.UUID      `json:"id"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
 	row := q.db.QueryRowContext(ctx, updateUser,
-		arg.ID,
 		arg.Email,
 		arg.FirstName,
 		arg.LastName,
+		arg.ID,
 	)
 	var i User
 	err := row.Scan(
