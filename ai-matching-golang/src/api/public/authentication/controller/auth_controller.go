@@ -5,6 +5,8 @@ import (
 	"ai-matching/src/api/public/authentication/response"
 	"ai-matching/src/api/public/authentication/usecase"
 	"context"
+	"github.com/danielgtaylor/huma/v2"
+	"os"
 )
 
 type AuthController struct {
@@ -35,7 +37,9 @@ func (c *AuthController) Login(ctx context.Context, input *LoginInput) (*LoginOu
 }
 
 type RegisterInput struct {
-	Body requests.RegisterRequest
+	Body           requests.RegisterRequest
+	XSystemAdminID string `header:"X-SYSTEM-ADMIN-ID" required:"true"`
+	XCompanyID     string `header:"X-Company-IDX-COMPANY-ID" required:"true"`
 }
 
 type RegisterOutput struct {
@@ -43,6 +47,14 @@ type RegisterOutput struct {
 }
 
 func (c *AuthController) Register(ctx context.Context, input *RegisterInput) (*RegisterOutput, error) {
+	// ユーザーの登録はシステム管理者しかできない
+	// 環境変数のX_SYSTEM_ADMIN_ID, X_COMPANY_IDがリクエストヘッダーに、含まれ一致しているかをチェックする
+	envXSystemAdminID := os.Getenv("X_SYSTEM_ADMIN_ID")
+	envXCompanyID := os.Getenv("X_COMPANY_ID")
+	if envXCompanyID != input.XCompanyID || envXSystemAdminID != input.XSystemAdminID {
+		return nil, huma.Error401Unauthorized("認証に失敗しました...")
+	}
+
 	resp, err := c.usecase.Register(ctx, input.Body)
 	if err != nil {
 		return nil, err

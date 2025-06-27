@@ -19,7 +19,7 @@ INSERT INTO users (
 ) VALUES (
              $1, $2, $3, $4
          )
-    RETURNING id, cognito_id, email, first_name, last_name, created_at, updated_at
+    RETURNING id, cognito_id, email, is_system_admin, first_name, last_name, created_at, updated_at
 `
 
 type CreateUserParams struct {
@@ -41,6 +41,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.ID,
 		&i.CognitoID,
 		&i.Email,
+		&i.IsSystemAdmin,
 		&i.FirstName,
 		&i.LastName,
 		&i.CreatedAt,
@@ -60,7 +61,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id uuid.UUID) error {
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, cognito_id, email, first_name, last_name, created_at, updated_at FROM users
+SELECT id, cognito_id, email, is_system_admin, first_name, last_name, created_at, updated_at FROM users
 WHERE id = $1::uuid LIMIT 1
 `
 
@@ -71,6 +72,7 @@ func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.ID,
 		&i.CognitoID,
 		&i.Email,
+		&i.IsSystemAdmin,
 		&i.FirstName,
 		&i.LastName,
 		&i.CreatedAt,
@@ -80,7 +82,7 @@ func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (User, error) {
 }
 
 const getUserByCognitoID = `-- name: GetUserByCognitoID :one
-SELECT id, cognito_id, email, first_name, last_name, created_at, updated_at FROM users
+SELECT id, cognito_id, email, is_system_admin, first_name, last_name, created_at, updated_at FROM users
 WHERE cognito_id = $1 LIMIT 1
 `
 
@@ -91,6 +93,7 @@ func (q *Queries) GetUserByCognitoID(ctx context.Context, cognitoID string) (Use
 		&i.ID,
 		&i.CognitoID,
 		&i.Email,
+		&i.IsSystemAdmin,
 		&i.FirstName,
 		&i.LastName,
 		&i.CreatedAt,
@@ -100,7 +103,7 @@ func (q *Queries) GetUserByCognitoID(ctx context.Context, cognitoID string) (Use
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, cognito_id, email, first_name, last_name, created_at, updated_at FROM users
+SELECT id, cognito_id, email, is_system_admin, first_name, last_name, created_at, updated_at FROM users
 WHERE email = $1 LIMIT 1
 `
 
@@ -111,6 +114,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.ID,
 		&i.CognitoID,
 		&i.Email,
+		&i.IsSystemAdmin,
 		&i.FirstName,
 		&i.LastName,
 		&i.CreatedAt,
@@ -121,7 +125,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 
 const getUserWithTenants = `-- name: GetUserWithTenants :one
 SELECT
-    u.id, u.cognito_id, u.email, u.first_name, u.last_name, u.created_at, u.updated_at,
+    u.id, u.cognito_id, u.email, u.is_system_admin, u.first_name, u.last_name, u.created_at, u.updated_at,
     COUNT(DISTINCT tu.tenant_id) as tenant_count
 FROM users u
          LEFT JOIN tenant_users tu ON u.id = tu.user_id
@@ -130,14 +134,15 @@ GROUP BY u.id
 `
 
 type GetUserWithTenantsRow struct {
-	ID          uuid.UUID      `json:"id"`
-	CognitoID   string         `json:"cognito_id"`
-	Email       string         `json:"email"`
-	FirstName   sql.NullString `json:"first_name"`
-	LastName    sql.NullString `json:"last_name"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
-	TenantCount int64          `json:"tenant_count"`
+	ID            uuid.UUID      `json:"id"`
+	CognitoID     string         `json:"cognito_id"`
+	Email         string         `json:"email"`
+	IsSystemAdmin bool           `json:"is_system_admin"`
+	FirstName     sql.NullString `json:"first_name"`
+	LastName      sql.NullString `json:"last_name"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
+	TenantCount   int64          `json:"tenant_count"`
 }
 
 func (q *Queries) GetUserWithTenants(ctx context.Context, id uuid.UUID) (GetUserWithTenantsRow, error) {
@@ -147,6 +152,7 @@ func (q *Queries) GetUserWithTenants(ctx context.Context, id uuid.UUID) (GetUser
 		&i.ID,
 		&i.CognitoID,
 		&i.Email,
+		&i.IsSystemAdmin,
 		&i.FirstName,
 		&i.LastName,
 		&i.CreatedAt,
@@ -157,7 +163,7 @@ func (q *Queries) GetUserWithTenants(ctx context.Context, id uuid.UUID) (GetUser
 }
 
 const getUsersNotInTenant = `-- name: GetUsersNotInTenant :many
-SELECT u.id, u.cognito_id, u.email, u.first_name, u.last_name, u.created_at, u.updated_at
+SELECT u.id, u.cognito_id, u.email, u.is_system_admin, u.first_name, u.last_name, u.created_at, u.updated_at
 FROM users u
 WHERE u.id NOT IN (
     SELECT user_id FROM tenant_users WHERE tenant_id = $1
@@ -185,6 +191,7 @@ func (q *Queries) GetUsersNotInTenant(ctx context.Context, arg GetUsersNotInTena
 			&i.ID,
 			&i.CognitoID,
 			&i.Email,
+			&i.IsSystemAdmin,
 			&i.FirstName,
 			&i.LastName,
 			&i.CreatedAt,
@@ -204,7 +211,7 @@ func (q *Queries) GetUsersNotInTenant(ctx context.Context, arg GetUsersNotInTena
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, cognito_id, email, first_name, last_name, created_at, updated_at FROM users
+SELECT id, cognito_id, email, is_system_admin, first_name, last_name, created_at, updated_at FROM users
 ORDER BY id
 LIMIT $1 OFFSET $2
 `
@@ -227,6 +234,7 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 			&i.ID,
 			&i.CognitoID,
 			&i.Email,
+			&i.IsSystemAdmin,
 			&i.FirstName,
 			&i.LastName,
 			&i.CreatedAt,
@@ -252,7 +260,7 @@ SET email = $1,
     last_name = $3,
     updated_at = NOW()
 WHERE id = $4::uuid
-RETURNING id, cognito_id, email, first_name, last_name, created_at, updated_at
+RETURNING id, cognito_id, email, is_system_admin, first_name, last_name, created_at, updated_at
 `
 
 type UpdateUserParams struct {
@@ -274,6 +282,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.ID,
 		&i.CognitoID,
 		&i.Email,
+		&i.IsSystemAdmin,
 		&i.FirstName,
 		&i.LastName,
 		&i.CreatedAt,

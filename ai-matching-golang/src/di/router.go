@@ -33,7 +33,7 @@ func SetupRouter(container *Container) *fiber.App {
 	app.Use(logger.New())
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: "*",
-		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization, X-COMPANY-ID, X-SYSTEM-ADMIN-ID",
 		AllowMethods: "GET, HEAD, PUT, PATCH, POST, DELETE",
 	}))
 

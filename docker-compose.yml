@@ -60,6 +60,8 @@ services:
       COGNITO_CLIENT_SECRET: local_client_secret
       COGNITO_ENDPOINT: http://cognito-local:9229
       COGNITO_AUTO_CONFIRM: "true"
+      X_COMPANY_ID: ${X_COMPANY_ID}
+      X_SYSTEM_ADMIN_ID: ${X_SYSTEM_ADMIN_ID}
     depends_on:
       postgres:
         condition: service_healthy

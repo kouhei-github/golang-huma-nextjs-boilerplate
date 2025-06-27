@@ -106,7 +106,7 @@ func (q *Queries) GetTenantsByUser(ctx context.Context, userID uuid.UUID) ([]Ten
 }
 
 const getUsersByTenant = `-- name: GetUsersByTenant :many
-SELECT u.id, u.cognito_id, u.email, u.first_name, u.last_name, u.created_at, u.updated_at FROM users u
+SELECT u.id, u.cognito_id, u.email, u.is_system_admin, u.first_name, u.last_name, u.created_at, u.updated_at FROM users u
 INNER JOIN tenant_users tu ON u.id = tu.user_id
 WHERE tu.tenant_id = $1::uuid
 ORDER BY u.email
@@ -125,6 +125,7 @@ func (q *Queries) GetUsersByTenant(ctx context.Context, tenantID uuid.UUID) ([]U
 			&i.ID,
 			&i.CognitoID,
 			&i.Email,
+			&i.IsSystemAdmin,
 			&i.FirstName,
 			&i.LastName,
 			&i.CreatedAt,

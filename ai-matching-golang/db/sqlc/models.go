@@ -40,11 +40,12 @@ type TenantUser struct {
 }
 
 type User struct {
-	ID        uuid.UUID      `json:"id"`
-	CognitoID string         `json:"cognito_id"`
-	Email     string         `json:"email"`
-	FirstName sql.NullString `json:"first_name"`
-	LastName  sql.NullString `json:"last_name"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
+	ID            uuid.UUID      `json:"id"`
+	CognitoID     string         `json:"cognito_id"`
+	Email         string         `json:"email"`
+	IsSystemAdmin bool           `json:"is_system_admin"`
+	FirstName     sql.NullString `json:"first_name"`
+	LastName      sql.NullString `json:"last_name"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
 }
