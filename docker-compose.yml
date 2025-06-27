@@ -17,6 +17,25 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - clinic-rag-network
+
+  cognito-local:
+    image: jagregory/cognito-local:latest
+    container_name: clinic-rag-cognito-local
+    ports:
+      - "9229:9229"
+    volumes:
+      - ./cognito/.cognito:/app/.cognito
+      - ./cognito/init-cognito.sh:/docker-entrypoint-initdb.d/init-cognito.sh:ro
+    environment:
+      COGNITO_LOCAL_USERPOOLID: local_pool_id
+      COGNITO_LOCAL_USERPOOLCLIENTID: local_client_id
+      COGNITO_LOCAL_USERPOOLCLIENTSECRET: local_client_secret
+      COGNITO_LOCAL_REGION: us-east-1
+      COGNITO_LOCAL_DOMAIN: localhost:9229
+    networks:
+      - clinic-rag-network
 
   golang-app:
     build:
@@ -33,12 +52,24 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       DB_NAME: ${DB_NAME:-clinic_rag}
       DB_SSL_MODE: ${DB_SSL_MODE:-disable}
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
+      COGNITO_USER_POOL_ID: local_pool_id
+      COGNITO_CLIENT_ID: local_client_id
+      COGNITO_CLIENT_SECRET: local_client_secret
+      COGNITO_ENDPOINT: http://cognito-local:9229
+      COGNITO_AUTO_CONFIRM: "true"
     depends_on:
       postgres:
         condition: service_healthy
+      cognito-local:
+        condition: service_started
     volumes:
       - ./ai-matching-golang:/app
     command: air
+    networks:
+      - clinic-rag-network
 
   nextjs-app:
     build:
@@ -60,3 +91,7 @@ services:
 volumes:
   postgres_data:
   nextjs_node_modules:
+
+networks:
+  clinic-rag-network:
+    driver: bridge

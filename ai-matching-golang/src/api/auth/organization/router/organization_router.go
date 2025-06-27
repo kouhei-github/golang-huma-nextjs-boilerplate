@@ -1,15 +1,13 @@
 package router
 
 import (
-	"ai-matching/db/sqlc"
 	"ai-matching/src/api/auth/organization/controller"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/gofiber/fiber/v2"
 )
 
-func RegisterOrganizationRoutes(api huma.API, router fiber.Router, queries db.Querier) {
-	orgController := controller.NewOrganizationController(queries)
+func RegisterOrganizationRoutes(api huma.API, router fiber.Router, orgController *controller.OrganizationController) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "get-organization",

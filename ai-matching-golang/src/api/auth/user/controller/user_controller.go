@@ -1,11 +1,9 @@
 package controller
 
 import (
-	"ai-matching/db/sqlc"
 	"ai-matching/src/api/auth/user/requests"
 	"ai-matching/src/api/auth/user/response"
 	"ai-matching/src/api/auth/user/usecase"
-	"ai-matching/src/infrastructure/repository"
 	"context"
 )
 
@@ -13,10 +11,7 @@ type UserController struct {
 	usecase *usecase.UserUsecase
 }
 
-func NewUserController(queries db.Querier) *UserController {
-	userRepo := repository.NewUserRepository(queries)
-	userUsecase := usecase.NewUserUsecase(userRepo)
-
+func NewUserController(userUsecase *usecase.UserUsecase) *UserController {
 	return &UserController{
 		usecase: userUsecase,
 	}

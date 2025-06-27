@@ -7,8 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func RegisterHealthRoutes(api huma.API, router fiber.Router) {
-	healthController := controller.NewHealthController()
+func RegisterHealthRoutes(api huma.API, router fiber.Router, healthController *controller.HealthController) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "get-health",

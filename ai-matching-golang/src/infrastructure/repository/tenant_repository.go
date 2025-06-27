@@ -44,3 +44,24 @@ func (r *tenantRepository) UpdateTenant(ctx context.Context, params db.UpdateTen
 func (r *tenantRepository) DeleteTenant(ctx context.Context, id int64) error {
 	return r.queries.DeleteTenant(ctx, id)
 }
+
+// Relationship methods
+
+func (r *tenantRepository) GetTenantWithUserCount(ctx context.Context, id int64) (db.GetTenantWithUserCountRow, error) {
+	return r.queries.GetTenantWithUserCount(ctx, id)
+}
+
+func (r *tenantRepository) GetTenantsByUserID(ctx context.Context, userID int64) ([]db.GetTenantsByUserIDRow, error) {
+	return r.queries.GetTenantsByUserID(ctx, userID)
+}
+
+func (r *tenantRepository) CheckUserBelongsToTenant(ctx context.Context, tenantID, userID int64) (bool, error) {
+	belongs, err := r.queries.CheckUserBelongsToTenant(ctx, db.CheckUserBelongsToTenantParams{
+		TenantID: tenantID,
+		UserID:   userID,
+	})
+	if err != nil {
+		return false, err
+	}
+	return belongs, nil
+}

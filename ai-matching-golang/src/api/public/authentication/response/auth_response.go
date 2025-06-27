@@ -3,17 +3,20 @@ package response
 import "time"
 
 type AuthResponse struct {
-	AccessToken  string    `json:"accessToken" doc:"JWT access token"`
-	RefreshToken string    `json:"refreshToken" doc:"JWT refresh token"`
-	ExpiresAt    time.Time `json:"expiresAt" doc:"Token expiration time"`
-	User         UserInfo  `json:"user" doc:"User information"`
+	AccessToken          string    `json:"accessToken,omitempty" doc:"JWT access token"`
+	IdToken              string    `json:"idToken,omitempty" doc:"JWT ID token"`
+	RefreshToken         string    `json:"refreshToken,omitempty" doc:"JWT refresh token"`
+	TokenType            string    `json:"tokenType,omitempty" doc:"Token type (Bearer)"`
+	ExpiresAt            time.Time `json:"expiresAt,omitempty" doc:"Token expiration time"`
+	User                 UserInfo  `json:"user" doc:"User information"`
+	Message              string    `json:"message,omitempty" doc:"Response message"`
+	RequiresConfirmation bool      `json:"requiresConfirmation,omitempty" doc:"Whether email confirmation is required"`
 }
 
 type UserInfo struct {
-	ID             int64  `json:"id" doc:"User ID"`
-	Email          string `json:"email" doc:"User email"`
-	FirstName      string `json:"firstName" doc:"User first name"`
-	LastName       string `json:"lastName" doc:"User last name"`
-	OrganizationID *int64 `json:"organizationId,omitempty" doc:"Organization ID"`
-	TenantID       *int64 `json:"tenantId,omitempty" doc:"Tenant ID"`
+	ID        int64    `json:"id" doc:"User ID"`
+	Email     string   `json:"email" doc:"User email"`
+	FirstName string   `json:"firstName" doc:"User first name"`
+	LastName  string   `json:"lastName" doc:"User last name"`
+	Tenants   []string `json:"tenants,omitempty" doc:"List of tenant names user belongs to"`
 }

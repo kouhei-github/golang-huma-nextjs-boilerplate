@@ -7,7 +7,28 @@ package db
 
 import (
 	"context"
+	"database/sql"
+	"time"
 )
+
+const checkUserBelongsToTenant = `-- name: CheckUserBelongsToTenant :one
+SELECT EXISTS(
+    SELECT 1 FROM tenant_users
+    WHERE tenant_id = $1 AND user_id = $2
+) as belongs
+`
+
+type CheckUserBelongsToTenantParams struct {
+	TenantID int64 `json:"tenant_id"`
+	UserID   int64 `json:"user_id"`
+}
+
+func (q *Queries) CheckUserBelongsToTenant(ctx context.Context, arg CheckUserBelongsToTenantParams) (bool, error) {
+	row := q.db.QueryRowContext(ctx, checkUserBelongsToTenant, arg.TenantID, arg.UserID)
+	var belongs bool
+	err := row.Scan(&belongs)
+	return belongs, err
+}
 
 const createTenant = `-- name: CreateTenant :one
 INSERT INTO tenants (
@@ -94,6 +115,94 @@ func (q *Queries) GetTenantBySubdomain(ctx context.Context, subdomain string) (T
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getTenantWithUserCount = `-- name: GetTenantWithUserCount :one
+SELECT 
+    t.id, t.organization_id, t.name, t.subdomain, t.is_active, t.created_at, t.updated_at,
+    COUNT(DISTINCT tu.user_id) as user_count
+FROM tenants t
+LEFT JOIN tenant_users tu ON t.id = tu.tenant_id
+WHERE t.id = $1
+GROUP BY t.id
+`
+
+type GetTenantWithUserCountRow struct {
+	ID             int64     `json:"id"`
+	OrganizationID int64     `json:"organization_id"`
+	Name           string    `json:"name"`
+	Subdomain      string    `json:"subdomain"`
+	IsActive       bool      `json:"is_active"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+	UserCount      int64     `json:"user_count"`
+}
+
+func (q *Queries) GetTenantWithUserCount(ctx context.Context, id int64) (GetTenantWithUserCountRow, error) {
+	row := q.db.QueryRowContext(ctx, getTenantWithUserCount, id)
+	var i GetTenantWithUserCountRow
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.Name,
+		&i.Subdomain,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.UserCount,
+	)
+	return i, err
+}
+
+const getTenantsByUserID = `-- name: GetTenantsByUserID :many
+SELECT t.id, t.organization_id, t.name, t.subdomain, t.is_active, t.created_at, t.updated_at, tu.role
+FROM tenants t
+INNER JOIN tenant_users tu ON t.id = tu.tenant_id
+WHERE tu.user_id = $1 AND t.is_active = true
+ORDER BY t.name
+`
+
+type GetTenantsByUserIDRow struct {
+	ID             int64          `json:"id"`
+	OrganizationID int64          `json:"organization_id"`
+	Name           string         `json:"name"`
+	Subdomain      string         `json:"subdomain"`
+	IsActive       bool           `json:"is_active"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	Role           sql.NullString `json:"role"`
+}
+
+func (q *Queries) GetTenantsByUserID(ctx context.Context, userID int64) ([]GetTenantsByUserIDRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTenantsByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetTenantsByUserIDRow{}
+	for rows.Next() {
+		var i GetTenantsByUserIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrganizationID,
+			&i.Name,
+			&i.Subdomain,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Role,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listTenantsByOrganization = `-- name: ListTenantsByOrganization :many

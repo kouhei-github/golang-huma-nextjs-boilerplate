@@ -33,3 +33,25 @@ RETURNING *;
 -- name: DeleteTenant :exec
 DELETE FROM tenants
 WHERE id = $1;
+
+-- name: GetTenantWithUserCount :one
+SELECT 
+    t.*,
+    COUNT(DISTINCT tu.user_id) as user_count
+FROM tenants t
+LEFT JOIN tenant_users tu ON t.id = tu.tenant_id
+WHERE t.id = $1
+GROUP BY t.id;
+
+-- name: GetTenantsByUserID :many
+SELECT t.*, tu.role
+FROM tenants t
+INNER JOIN tenant_users tu ON t.id = tu.tenant_id
+WHERE tu.user_id = $1 AND t.is_active = true
+ORDER BY t.name;
+
+-- name: CheckUserBelongsToTenant :one
+SELECT EXISTS(
+    SELECT 1 FROM tenant_users
+    WHERE tenant_id = $1 AND user_id = $2
+) as belongs;

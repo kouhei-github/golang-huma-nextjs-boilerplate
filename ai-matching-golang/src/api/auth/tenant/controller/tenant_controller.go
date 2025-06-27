@@ -1,11 +1,9 @@
 package controller
 
 import (
-	"ai-matching/db/sqlc"
 	"ai-matching/src/api/auth/tenant/requests"
 	"ai-matching/src/api/auth/tenant/response"
 	"ai-matching/src/api/auth/tenant/usecase"
-	"ai-matching/src/infrastructure/repository"
 	"context"
 )
 
@@ -13,10 +11,7 @@ type TenantController struct {
 	usecase *usecase.TenantUsecase
 }
 
-func NewTenantController(queries db.Querier) *TenantController {
-	tenantRepo := repository.NewTenantRepository(queries)
-	tenantUsecase := usecase.NewTenantUsecase(tenantRepo)
-
+func NewTenantController(tenantUsecase *usecase.TenantUsecase) *TenantController {
 	return &TenantController{
 		usecase: tenantUsecase,
 	}

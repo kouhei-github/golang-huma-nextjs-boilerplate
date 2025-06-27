@@ -8,6 +8,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 const createOrganization = `-- name: CreateOrganization :one
@@ -66,6 +67,99 @@ func (q *Queries) GetOrganization(ctx context.Context, id int64) (Organization, 
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getOrganizationByTenant = `-- name: GetOrganizationByTenant :one
+SELECT o.id, o.name, o.description, o.is_active, o.created_at, o.updated_at FROM organizations o
+INNER JOIN tenants t ON o.id = t.organization_id
+WHERE t.id = $1
+LIMIT 1
+`
+
+func (q *Queries) GetOrganizationByTenant(ctx context.Context, id int64) (Organization, error) {
+	row := q.db.QueryRowContext(ctx, getOrganizationByTenant, id)
+	var i Organization
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getOrganizationWithTenants = `-- name: GetOrganizationWithTenants :one
+SELECT 
+    o.id, o.name, o.description, o.is_active, o.created_at, o.updated_at,
+    COUNT(t.id) as tenant_count
+FROM organizations o
+LEFT JOIN tenants t ON o.id = t.organization_id AND t.is_active = true
+WHERE o.id = $1
+GROUP BY o.id
+`
+
+type GetOrganizationWithTenantsRow struct {
+	ID          int64          `json:"id"`
+	Name        string         `json:"name"`
+	Description sql.NullString `json:"description"`
+	IsActive    bool           `json:"is_active"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	TenantCount int64          `json:"tenant_count"`
+}
+
+func (q *Queries) GetOrganizationWithTenants(ctx context.Context, id int64) (GetOrganizationWithTenantsRow, error) {
+	row := q.db.QueryRowContext(ctx, getOrganizationWithTenants, id)
+	var i GetOrganizationWithTenantsRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.IsActive,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.TenantCount,
+	)
+	return i, err
+}
+
+const getTenantsByOrganization = `-- name: GetTenantsByOrganization :many
+SELECT id, organization_id, name, subdomain, is_active, created_at, updated_at FROM tenants
+WHERE organization_id = $1 AND is_active = true
+ORDER BY name
+`
+
+func (q *Queries) GetTenantsByOrganization(ctx context.Context, organizationID int64) ([]Tenant, error) {
+	rows, err := q.db.QueryContext(ctx, getTenantsByOrganization, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Tenant{}
+	for rows.Next() {
+		var i Tenant
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrganizationID,
+			&i.Name,
+			&i.Subdomain,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listOrganizations = `-- name: ListOrganizations :many

@@ -52,3 +52,4 @@ Thumbs.db
 # Generated files
 db/sqlc/
 docs/
+main

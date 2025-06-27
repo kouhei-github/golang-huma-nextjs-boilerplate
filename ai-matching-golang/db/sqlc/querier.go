@@ -6,33 +6,42 @@ package db
 
 import (
 	"context"
-	"database/sql"
 )
 
 type Querier interface {
+	AddUserToTenant(ctx context.Context, arg AddUserToTenantParams) (TenantUser, error)
+	CheckUserBelongsToTenant(ctx context.Context, arg CheckUserBelongsToTenantParams) (bool, error)
 	CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error)
 	CreateTenant(ctx context.Context, arg CreateTenantParams) (Tenant, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
-	CreateUserAuth(ctx context.Context, arg CreateUserAuthParams) (UserAuth, error)
-	DeleteExpiredUserAuth(ctx context.Context) error
 	DeleteOrganization(ctx context.Context, id int64) error
 	DeleteTenant(ctx context.Context, id int64) error
 	DeleteUser(ctx context.Context, id int64) error
-	DeleteUserAuth(ctx context.Context, id int64) error
 	GetOrganization(ctx context.Context, id int64) (Organization, error)
+	GetOrganizationByTenant(ctx context.Context, id int64) (Organization, error)
+	GetOrganizationWithTenants(ctx context.Context, id int64) (GetOrganizationWithTenantsRow, error)
 	GetTenant(ctx context.Context, id int64) (Tenant, error)
 	GetTenantBySubdomain(ctx context.Context, subdomain string) (Tenant, error)
+	GetTenantUser(ctx context.Context, arg GetTenantUserParams) (TenantUser, error)
+	GetTenantWithUserCount(ctx context.Context, id int64) (GetTenantWithUserCountRow, error)
+	GetTenantsByOrganization(ctx context.Context, organizationID int64) ([]Tenant, error)
+	GetTenantsByUser(ctx context.Context, userID int64) ([]Tenant, error)
+	GetTenantsByUserID(ctx context.Context, userID int64) ([]GetTenantsByUserIDRow, error)
 	GetUser(ctx context.Context, id int64) (User, error)
-	GetUserAuthByToken(ctx context.Context, refreshToken sql.NullString) (UserAuth, error)
-	GetUserAuthByUserID(ctx context.Context, userID int64) (UserAuth, error)
+	GetUserByCognitoID(ctx context.Context, cognitoID string) (User, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
+	GetUserWithTenants(ctx context.Context, id int64) (GetUserWithTenantsRow, error)
+	GetUsersByTenant(ctx context.Context, tenantID int64) ([]User, error)
+	GetUsersNotInTenant(ctx context.Context, arg GetUsersNotInTenantParams) ([]User, error)
 	ListOrganizations(ctx context.Context, arg ListOrganizationsParams) ([]Organization, error)
+	ListTenantUsers(ctx context.Context, tenantID int64) ([]ListTenantUsersRow, error)
 	ListTenantsByOrganization(ctx context.Context, arg ListTenantsByOrganizationParams) ([]Tenant, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
+	RemoveUserFromTenant(ctx context.Context, arg RemoveUserFromTenantParams) error
 	UpdateOrganization(ctx context.Context, arg UpdateOrganizationParams) (Organization, error)
 	UpdateTenant(ctx context.Context, arg UpdateTenantParams) (Tenant, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
-	UpdateUserAuth(ctx context.Context, arg UpdateUserAuthParams) (UserAuth, error)
+	UpdateUserRoleInTenant(ctx context.Context, arg UpdateUserRoleInTenantParams) (TenantUser, error)
 }
 
 var _ Querier = (*Queries)(nil)

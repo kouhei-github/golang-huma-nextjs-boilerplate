@@ -8,46 +8,41 @@ package db
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
-    email, password_hash, first_name, last_name, organization_id, tenant_id
+    cognito_id, email, first_name, last_name
 ) VALUES (
-    $1, $2, $3, $4, $5, $6
+    $1, $2, $3, $4
 )
-RETURNING id, email, password_hash, first_name, last_name, created_at, updated_at, organization_id, tenant_id
+RETURNING id, cognito_id, email, first_name, last_name, created_at, updated_at
 `
 
 type CreateUserParams struct {
-	Email          string         `json:"email"`
-	PasswordHash   string         `json:"password_hash"`
-	FirstName      sql.NullString `json:"first_name"`
-	LastName       sql.NullString `json:"last_name"`
-	OrganizationID sql.NullInt64  `json:"organization_id"`
-	TenantID       sql.NullInt64  `json:"tenant_id"`
+	CognitoID string         `json:"cognito_id"`
+	Email     string         `json:"email"`
+	FirstName sql.NullString `json:"first_name"`
+	LastName  sql.NullString `json:"last_name"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
 	row := q.db.QueryRowContext(ctx, createUser,
+		arg.CognitoID,
 		arg.Email,
-		arg.PasswordHash,
 		arg.FirstName,
 		arg.LastName,
-		arg.OrganizationID,
-		arg.TenantID,
 	)
 	var i User
 	err := row.Scan(
 		&i.ID,
+		&i.CognitoID,
 		&i.Email,
-		&i.PasswordHash,
 		&i.FirstName,
 		&i.LastName,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.OrganizationID,
-		&i.TenantID,
 	)
 	return i, err
 }
@@ -63,7 +58,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, email, password_hash, first_name, last_name, created_at, updated_at, organization_id, tenant_id FROM users
+SELECT id, cognito_id, email, first_name, last_name, created_at, updated_at FROM users
 WHERE id = $1 LIMIT 1
 `
 
@@ -72,20 +67,38 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
 	var i User
 	err := row.Scan(
 		&i.ID,
+		&i.CognitoID,
 		&i.Email,
-		&i.PasswordHash,
 		&i.FirstName,
 		&i.LastName,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.OrganizationID,
-		&i.TenantID,
+	)
+	return i, err
+}
+
+const getUserByCognitoID = `-- name: GetUserByCognitoID :one
+SELECT id, cognito_id, email, first_name, last_name, created_at, updated_at FROM users
+WHERE cognito_id = $1 LIMIT 1
+`
+
+func (q *Queries) GetUserByCognitoID(ctx context.Context, cognitoID string) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByCognitoID, cognitoID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.CognitoID,
+		&i.Email,
+		&i.FirstName,
+		&i.LastName,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, password_hash, first_name, last_name, created_at, updated_at, organization_id, tenant_id FROM users
+SELECT id, cognito_id, email, first_name, last_name, created_at, updated_at FROM users
 WHERE email = $1 LIMIT 1
 `
 
@@ -94,20 +107,102 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 	var i User
 	err := row.Scan(
 		&i.ID,
+		&i.CognitoID,
 		&i.Email,
-		&i.PasswordHash,
 		&i.FirstName,
 		&i.LastName,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.OrganizationID,
-		&i.TenantID,
 	)
 	return i, err
 }
 
+const getUserWithTenants = `-- name: GetUserWithTenants :one
+SELECT 
+    u.id, u.cognito_id, u.email, u.first_name, u.last_name, u.created_at, u.updated_at,
+    COUNT(DISTINCT tu.tenant_id) as tenant_count
+FROM users u
+LEFT JOIN tenant_users tu ON u.id = tu.user_id
+WHERE u.id = $1
+GROUP BY u.id
+`
+
+type GetUserWithTenantsRow struct {
+	ID          int64          `json:"id"`
+	CognitoID   string         `json:"cognito_id"`
+	Email       string         `json:"email"`
+	FirstName   sql.NullString `json:"first_name"`
+	LastName    sql.NullString `json:"last_name"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	TenantCount int64          `json:"tenant_count"`
+}
+
+func (q *Queries) GetUserWithTenants(ctx context.Context, id int64) (GetUserWithTenantsRow, error) {
+	row := q.db.QueryRowContext(ctx, getUserWithTenants, id)
+	var i GetUserWithTenantsRow
+	err := row.Scan(
+		&i.ID,
+		&i.CognitoID,
+		&i.Email,
+		&i.FirstName,
+		&i.LastName,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.TenantCount,
+	)
+	return i, err
+}
+
+const getUsersNotInTenant = `-- name: GetUsersNotInTenant :many
+SELECT u.id, u.cognito_id, u.email, u.first_name, u.last_name, u.created_at, u.updated_at
+FROM users u
+WHERE u.id NOT IN (
+    SELECT user_id FROM tenant_users WHERE tenant_id = $1
+)
+ORDER BY u.email
+LIMIT $2 OFFSET $3
+`
+
+type GetUsersNotInTenantParams struct {
+	TenantID int64 `json:"tenant_id"`
+	Limit    int32 `json:"limit"`
+	Offset   int32 `json:"offset"`
+}
+
+func (q *Queries) GetUsersNotInTenant(ctx context.Context, arg GetUsersNotInTenantParams) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, getUsersNotInTenant, arg.TenantID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []User{}
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.CognitoID,
+			&i.Email,
+			&i.FirstName,
+			&i.LastName,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listUsers = `-- name: ListUsers :many
-SELECT id, email, password_hash, first_name, last_name, created_at, updated_at, organization_id, tenant_id FROM users
+SELECT id, cognito_id, email, first_name, last_name, created_at, updated_at FROM users
 ORDER BY id
 LIMIT $1 OFFSET $2
 `
@@ -128,14 +223,12 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 		var i User
 		if err := rows.Scan(
 			&i.ID,
+			&i.CognitoID,
 			&i.Email,
-			&i.PasswordHash,
 			&i.FirstName,
 			&i.LastName,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.OrganizationID,
-			&i.TenantID,
 		); err != nil {
 			return nil, err
 		}
@@ -157,7 +250,7 @@ SET email = $2,
     last_name = $4,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, email, password_hash, first_name, last_name, created_at, updated_at, organization_id, tenant_id
+RETURNING id, cognito_id, email, first_name, last_name, created_at, updated_at
 `
 
 type UpdateUserParams struct {
@@ -177,14 +270,12 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 	var i User
 	err := row.Scan(
 		&i.ID,
+		&i.CognitoID,
 		&i.Email,
-		&i.PasswordHash,
 		&i.FirstName,
 		&i.LastName,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.OrganizationID,
-		&i.TenantID,
 	)
 	return i, err
 }

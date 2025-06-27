@@ -1,15 +1,13 @@
 package router
 
 import (
-	"ai-matching/db/sqlc"
 	"ai-matching/src/api/auth/tenant/controller"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/gofiber/fiber/v2"
 )
 
-func RegisterTenantRoutes(api huma.API, router fiber.Router, queries db.Querier) {
-	tenantController := controller.NewTenantController(queries)
+func RegisterTenantRoutes(api huma.API, router fiber.Router, tenantController *controller.TenantController) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "get-tenant",

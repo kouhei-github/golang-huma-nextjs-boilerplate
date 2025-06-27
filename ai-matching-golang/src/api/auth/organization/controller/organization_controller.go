@@ -1,11 +1,9 @@
 package controller
 
 import (
-	"ai-matching/db/sqlc"
 	"ai-matching/src/api/auth/organization/requests"
 	"ai-matching/src/api/auth/organization/response"
 	"ai-matching/src/api/auth/organization/usecase"
-	"ai-matching/src/infrastructure/repository"
 	"context"
 )
 
@@ -13,10 +11,7 @@ type OrganizationController struct {
 	usecase *usecase.OrganizationUsecase
 }
 
-func NewOrganizationController(queries db.Querier) *OrganizationController {
-	orgRepo := repository.NewOrganizationRepository(queries)
-	orgUsecase := usecase.NewOrganizationUsecase(orgRepo)
-
+func NewOrganizationController(orgUsecase *usecase.OrganizationUsecase) *OrganizationController {
 	return &OrganizationController{
 		usecase: orgUsecase,
 	}

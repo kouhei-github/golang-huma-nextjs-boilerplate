@@ -28,23 +28,21 @@ type Tenant struct {
 	UpdatedAt      time.Time `json:"updated_at"`
 }
 
-type User struct {
-	ID             int64          `json:"id"`
-	Email          string         `json:"email"`
-	PasswordHash   string         `json:"password_hash"`
-	FirstName      sql.NullString `json:"first_name"`
-	LastName       sql.NullString `json:"last_name"`
-	CreatedAt      time.Time      `json:"created_at"`
-	UpdatedAt      time.Time      `json:"updated_at"`
-	OrganizationID sql.NullInt64  `json:"organization_id"`
-	TenantID       sql.NullInt64  `json:"tenant_id"`
+type TenantUser struct {
+	ID        int64          `json:"id"`
+	TenantID  int64          `json:"tenant_id"`
+	UserID    int64          `json:"user_id"`
+	Role      sql.NullString `json:"role"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
 }
 
-type UserAuth struct {
-	ID           int64          `json:"id"`
-	UserID       int64          `json:"user_id"`
-	RefreshToken sql.NullString `json:"refresh_token"`
-	ExpiresAt    sql.NullTime   `json:"expires_at"`
-	CreatedAt    time.Time      `json:"created_at"`
-	UpdatedAt    time.Time      `json:"updated_at"`
+type User struct {
+	ID        int64          `json:"id"`
+	CognitoID string         `json:"cognito_id"`
+	Email     string         `json:"email"`
+	FirstName sql.NullString `json:"first_name"`
+	LastName  sql.NullString `json:"last_name"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
 }

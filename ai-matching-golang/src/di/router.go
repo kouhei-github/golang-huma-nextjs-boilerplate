@@ -3,9 +3,11 @@ package di
 import (
 	"ai-matching/src/api/auth/organization/router"
 	tenantRouter "ai-matching/src/api/auth/tenant/router"
+	tenantUserRouter "ai-matching/src/api/auth/tenant_user/router"
 	userRouter "ai-matching/src/api/auth/user/router"
 	authRouter "ai-matching/src/api/public/authentication/router"
 	healthRouter "ai-matching/src/api/public/health/router"
+	"ai-matching/src/infrastructure/middleware"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humafiber"
@@ -27,7 +29,6 @@ func SetupRouter(container *Container) *fiber.App {
 			})
 		},
 	})
-
 	app.Use(recover.New())
 	app.Use(logger.New())
 	app.Use(cors.New(cors.Config{
@@ -51,12 +52,16 @@ func SetupRouter(container *Container) *fiber.App {
 	publicAPI := app.Group("/api/v1/public")
 	authAPI := app.Group("/api/v1/auth")
 
-	healthRouter.RegisterHealthRoutes(api, publicAPI)
-	authRouter.RegisterAuthRoutes(api, publicAPI, container.Queries)
+	authMiddleware := middleware.NewAuthMiddleware()
+	authAPI.Use(authMiddleware.FiberMiddleware())
 
-	router.RegisterOrganizationRoutes(api, authAPI, container.Queries)
-	tenantRouter.RegisterTenantRoutes(api, authAPI, container.Queries)
-	userRouter.RegisterUserRoutes(api, authAPI, container.Queries)
+	healthRouter.RegisterHealthRoutes(api, publicAPI, container.HealthController)
+	authRouter.RegisterAuthRoutes(api, publicAPI, container.AuthController)
+
+	router.RegisterOrganizationRoutes(api, authAPI, container.OrganizationController)
+	tenantRouter.RegisterTenantRoutes(api, authAPI, container.TenantController)
+	userRouter.RegisterUserRoutes(api, authAPI, container.UserController)
+	tenantUserRouter.RegisterTenantUserRoutes(api, authAPI, container.TenantUserController)
 
 	return app
 }

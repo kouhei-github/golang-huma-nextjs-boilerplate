@@ -1,15 +1,13 @@
 package router
 
 import (
-	"ai-matching/db/sqlc"
 	"ai-matching/src/api/auth/user/controller"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/gofiber/fiber/v2"
 )
 
-func RegisterUserRoutes(api huma.API, router fiber.Router, queries db.Querier) {
-	userController := controller.NewUserController(queries)
+func RegisterUserRoutes(api huma.API, router fiber.Router, userController *controller.UserController) {
 
 	huma.Register(api, huma.Operation{
 		OperationID: "get-user",

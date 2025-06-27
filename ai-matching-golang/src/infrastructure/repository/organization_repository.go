@@ -39,3 +39,17 @@ func (r *organizationRepository) UpdateOrganization(ctx context.Context, params 
 func (r *organizationRepository) DeleteOrganization(ctx context.Context, id int64) error {
 	return r.queries.DeleteOrganization(ctx, id)
 }
+
+// Relationship methods
+
+func (r *organizationRepository) GetOrganizationWithTenants(ctx context.Context, id int64) (db.GetOrganizationWithTenantsRow, error) {
+	return r.queries.GetOrganizationWithTenants(ctx, id)
+}
+
+func (r *organizationRepository) GetTenantsByOrganization(ctx context.Context, organizationID int64) ([]db.Tenant, error) {
+	return r.queries.GetTenantsByOrganization(ctx, organizationID)
+}
+
+func (r *organizationRepository) GetOrganizationByTenant(ctx context.Context, tenantID int64) (db.Organization, error) {
+	return r.queries.GetOrganizationByTenant(ctx, tenantID)
+}

@@ -27,7 +27,12 @@ ai-matching-golang/
 │   │   └── public/       # パブリックエンドポイント
 │   ├── di/               # 依存性注入
 │   ├── domain/           # ドメイン層（インターフェース定義）
+│   │   └── interface/
+│   │       ├── repository/  # リポジトリインターフェース
+│   │       └── external/    # 外部サービスインターフェース
 │   └── infrastructure/   # インフラ層（実装）
+│       ├── repository/   # リポジトリ実装
+│       └── external/     # 外部サービス実装（AWS SDK等）
 ├── docs/                  # ドキュメント
 ├── etc/                   # その他のリソース
 └── tmp/                   # 一時ファイル（Air用）
@@ -46,6 +51,12 @@ ai-matching-golang/
 Controller   Usecase         Repository
    ↓            ↓                ↓
 Huma/Fiber  ビジネスロジック   SQLC生成コード
+
+[API層] → [ユースケース層] → [外部サービス層] → [外部API]
+   ↓            ↓                ↓
+Controller   Usecase         External Client
+   ↓            ↓                ↓
+Huma/Fiber  ビジネスロジック   AWS SDK/外部ライブラリ
 ```
 
 #### 各層の責務
@@ -70,22 +81,50 @@ Huma/Fiber  ビジネスロジック   SQLC生成コード
    - リポジトリインターフェースの実装
    - 外部サービスとの通信
    - データベースアクセス
+   
+   **重要**: 外部ライブラリに依存する実装は以下のディレクトリ構造に配置：
+   - `src/infrastructure/external/` - 外部サービスの実装（AWS SDK、外部APIクライアントなど）
+   - `src/domain/interface/external/` - 外部サービスのインターフェース定義
 
 ### 2. 依存性注入パターン
+
+依存性注入は `ai-matching-golang/src/di/container.go` で一元管理されています。
 
 ```go
 // di/container.go
 type Container struct {
-    DB      *sqlx.DB
-    Queries db.Querier  // インターフェースを使用（テスト可能）
+    DB            *sqlx.DB
+    Queries       db.Querier
+    CognitoClient external.CognitoClient
+    
+    // Repositories
+    UserRepository         repository.UserRepository
+    AuthRepository         repository.AuthRepository
+    OrganizationRepository repository.OrganizationRepository
+    TenantRepository       repository.TenantRepository
+    
+    // Usecases
+    AuthUsecase         *publicAuthUsecase.AuthUsecase
+    UserUsecase         *userUsecase.UserUsecase
+    OrganizationUsecase *organizationUsecase.OrganizationUsecase
+    TenantUsecase       *tenantUsecase.TenantUsecase
+    
+    // Controllers
+    AuthController         *publicAuthController.AuthController
+    UserController         *userController.UserController
+    OrganizationController *authController.OrganizationController
+    TenantController       *tenantController.TenantController
+    HealthController       *healthController.HealthController
 }
 
 // 使用例
 container := di.NewContainer()
-userRepo := repository.NewUserRepository(container.Queries)
-userUsecase := usecase.NewUserUsecase(userRepo)
-userController := controller.NewUserController(userUsecase)
+// すべての依存関係はコンテナ内で初期化される
+// ルーターはコンテナからコントローラーを取得して使用
+authRouter.RegisterAuthRoutes(api, publicAPI, container.AuthController)
 ```
+
+**重要**: すべてのユースケース、リポジトリ、外部サービスの注入は `ai-matching-golang/src/di/container.go` で行われます。新しい依存関係を追加する際は、このファイルを更新してください。
 
 ## SQLC の使用方法
 
@@ -399,6 +438,26 @@ type userRepository struct {
 
 func NewUserRepository(queries db.Querier) repository.UserRepository {
     return &userRepository{queries: queries}
+}
+```
+
+### 2.1. 外部サービスパターンの実装
+
+```go
+// インターフェース定義 (domain/interface/external/)
+type CognitoClient interface {
+    SignUp(ctx context.Context, email, password string, attributes map[string]string) (*cognitoidentityprovider.SignUpOutput, error)
+    InitiateAuth(ctx context.Context, email, password string) (*cognitoidentityprovider.InitiateAuthOutput, error)
+}
+
+// 実装 (infrastructure/external/cognito/)
+type cognitoClient struct {
+    client *cognitoidentityprovider.Client
+}
+
+func NewCognitoClient() (external.CognitoClient, error) {
+    // AWS SDK設定
+    return &cognitoClient{client: client}, nil
 }
 ```
 
