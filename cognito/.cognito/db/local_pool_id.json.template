@@ -1,0 +1,29 @@
+{
+  "Id": "local_pool_id",
+  "Name": "Local User Pool",
+  "Policies": {
+    "PasswordPolicy": {
+      "MinimumLength": 8,
+      "RequireUppercase": false,
+      "RequireLowercase": false,
+      "RequireNumbers": false,
+      "RequireSymbols": false
+    }
+  },
+  "UsernameAttributes": [
+    "email"
+  ],
+  "MfaConfiguration": "OFF",
+  "EstimatedNumberOfUsers": 0,
+  "EmailVerificationMessage": "Your verification code is {####}",
+  "EmailVerificationSubject": "Your verification code",
+  "AutoVerifiedAttributes": [
+    "email"
+  ],
+  "VerificationMessageTemplate": {
+    "DefaultEmailOption": "CONFIRM_WITH_CODE",
+    "EmailMessage": "Your verification code is {####}",
+    "EmailSubject": "Your verification code"
+  },
+  "Users": {}
+}

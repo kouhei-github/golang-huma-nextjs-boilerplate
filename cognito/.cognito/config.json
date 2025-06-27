@@ -1,0 +1,52 @@
+{
+  "UserPoolDefaults": {
+    "MfaConfiguration": "OFF"
+  },
+  "UserPools": [
+    {
+      "Id": "local_pool_id",
+      "Name": "Local User Pool",
+      "Policies": {
+        "PasswordPolicy": {
+          "MinimumLength": 8,
+          "RequireUppercase": false,
+          "RequireLowercase": false,
+          "RequireNumbers": false,
+          "RequireSymbols": false
+        }
+      },
+      "UsernameAttributes": [
+        "email"
+      ],
+      "MfaConfiguration": "OFF",
+      "EstimatedNumberOfUsers": 0,
+      "EmailVerificationMessage": "Your verification code is {####}",
+      "EmailVerificationSubject": "Your verification code",
+      "SmsVerificationMessage": "Your verification code is {####}",
+      "UserPoolTags": {},
+      "SmsConfiguration": {
+        "SnsCallerArn": "",
+        "ExternalId": ""
+      },
+      "AdminCreateUserConfig": {
+        "AllowAdminCreateUserOnly": false,
+        "UnusedAccountValidityDays": 7,
+        "InviteMessageTemplate": {
+          "EmailMessage": "Your username is {username} and temporary password is {####}.",
+          "EmailSubject": "Your temporary password",
+          "SMSMessage": "Your username is {username} and temporary password is {####}."
+        }
+      },
+      "AutoVerifiedAttributes": [
+        "email"
+      ],
+      "VerificationMessageTemplate": {
+        "DefaultEmailOption": "CONFIRM_WITH_CODE",
+        "EmailMessage": "Your verification code is {####}",
+        "EmailSubject": "Your verification code",
+        "SmsMessage": "Your verification code is {####}"
+      },
+      "Users": {}
+    }
+  ]
+}
