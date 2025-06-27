@@ -69,16 +69,7 @@ func (u *TenantUserUsecase) AddUserToTenant(ctx context.Context, tenantID, userI
 
 // RemoveUserFromTenant removes a user from a tenant
 func (u *TenantUserUsecase) RemoveUserFromTenant(ctx context.Context, tenantID, userID uuid.UUID) error {
-	// Check if user belongs to tenant
-	exists, err := u.tenantRepo.CheckUserBelongsToTenant(ctx, tenantID, userID)
-	if err != nil {
-		return fmt.Errorf("failed to check user tenant membership: %w", err)
-	}
-	if !exists {
-		return errors.New("user does not belong to this tenant")
-	}
-
-	err = u.tenantUserRepo.RemoveUserFromTenant(ctx, tenantID, userID)
+	err := u.tenantUserRepo.RemoveUserFromTenant(ctx, tenantID, userID)
 	if err != nil {
 		return fmt.Errorf("failed to remove user from tenant: %w", err)
 	}
@@ -126,16 +117,7 @@ func (u *TenantUserUsecase) GetTenantsByUser(ctx context.Context, userID uuid.UU
 
 // UpdateUserRoleInTenant updates a user's role in a tenant
 func (u *TenantUserUsecase) UpdateUserRoleInTenant(ctx context.Context, tenantID, userID uuid.UUID, role string) error {
-	// Check if user belongs to tenant
-	exists, err := u.tenantRepo.CheckUserBelongsToTenant(ctx, tenantID, userID)
-	if err != nil {
-		return fmt.Errorf("failed to check user tenant membership: %w", err)
-	}
-	if !exists {
-		return errors.New("user does not belong to this tenant")
-	}
-
-	_, err = u.tenantUserRepo.UpdateUserRoleInTenant(ctx, tenantID, userID, role)
+	_, err := u.tenantUserRepo.UpdateUserRoleInTenant(ctx, tenantID, userID, role)
 	if err != nil {
 		return fmt.Errorf("failed to update user role: %w", err)
 	}

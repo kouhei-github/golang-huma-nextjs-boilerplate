@@ -112,3 +112,98 @@ func (c *UserController) DeleteUser(ctx context.Context, input *DeleteUserInput)
 
 	return &DeleteUserOutput{Success: true}, nil
 }
+
+// Organization-scoped user endpoints
+
+type GetOrganizationUserInput struct {
+	OrganizationID uuid.UUID `path:"organizationId" doc:"Organization ID"`
+	UserID         uuid.UUID `path:"userId" doc:"User ID"`
+}
+
+type GetOrganizationUserOutput struct {
+	Body response.UserResponse
+}
+
+func (c *UserController) GetOrganizationUser(ctx context.Context, input *GetOrganizationUserInput) (*GetOrganizationUserOutput, error) {
+	// Get the user
+	resp, err := c.usecase.GetUser(ctx, input.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetOrganizationUserOutput{Body: *resp}, nil
+}
+
+type ListOrganizationUsersInput struct {
+	OrganizationID uuid.UUID `path:"organizationId" doc:"Organization ID"`
+	Page           int       `query:"page" default:"1" doc:"Page number"`
+	PageSize       int       `query:"pageSize" default:"10" doc:"Page size"`
+}
+
+type ListOrganizationUsersOutput struct {
+	Body response.UserListResponse
+}
+
+func (c *UserController) ListOrganizationUsers(ctx context.Context, input *ListOrganizationUsersInput) (*ListOrganizationUsersOutput, error) {
+	resp, err := c.usecase.ListUsers(ctx, input.Page, input.PageSize)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ListOrganizationUsersOutput{Body: *resp}, nil
+}
+
+type CreateOrganizationUserInput struct {
+	OrganizationID uuid.UUID `path:"organizationId" doc:"Organization ID"`
+	Body           requests.CreateUserRequest
+}
+
+type CreateOrganizationUserOutput struct {
+	Body response.UserResponse
+}
+
+func (c *UserController) CreateOrganizationUser(ctx context.Context, input *CreateOrganizationUserInput) (*CreateOrganizationUserOutput, error) {
+	resp, err := c.usecase.CreateUser(ctx, input.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return &CreateOrganizationUserOutput{Body: *resp}, nil
+}
+
+type UpdateOrganizationUserInput struct {
+	OrganizationID uuid.UUID `path:"organizationId" doc:"Organization ID"`
+	UserID         uuid.UUID `path:"userId" doc:"User ID"`
+	Body           requests.UpdateUserRequest
+}
+
+type UpdateOrganizationUserOutput struct {
+	Body response.UserResponse
+}
+
+func (c *UserController) UpdateOrganizationUser(ctx context.Context, input *UpdateOrganizationUserInput) (*UpdateOrganizationUserOutput, error) {
+	resp, err := c.usecase.UpdateUser(ctx, input.UserID, input.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return &UpdateOrganizationUserOutput{Body: *resp}, nil
+}
+
+type DeleteOrganizationUserInput struct {
+	OrganizationID uuid.UUID `path:"organizationId" doc:"Organization ID"`
+	UserID         uuid.UUID `path:"userId" doc:"User ID"`
+}
+
+type DeleteOrganizationUserOutput struct {
+	Success bool `json:"success"`
+}
+
+func (c *UserController) DeleteOrganizationUser(ctx context.Context, input *DeleteOrganizationUserInput) (*DeleteOrganizationUserOutput, error) {
+	err := c.usecase.DeleteUser(ctx, input.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &DeleteOrganizationUserOutput{Success: true}, nil
+}

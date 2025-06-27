@@ -10,7 +10,7 @@
 - **Webフレームワーク**: Fiber v2 + Huma v2
 - **データベース**: PostgreSQL
 - **ORM/クエリビルダー**: SQLC (型安全なSQL)
-- **認証**: JWT (現在はモック実装)
+- **認証**: AWS Cognito (JWT)
 - **開発ツール**: Air (ホットリロード), golang-migrate (マイグレーション)
 
 ## プロジェクト構成
@@ -32,11 +32,77 @@ ai-matching-golang/
 │   │       └── external/    # 外部サービスインターフェース
 │   └── infrastructure/   # インフラ層（実装）
 │       ├── repository/   # リポジトリ実装
+│       ├── middleware/   # 認証・認可ミドルウェア
 │       └── external/     # 外部サービス実装（AWS SDK等）
 ├── docs/                  # ドキュメント
 ├── etc/                   # その他のリソース
 └── tmp/                   # 一時ファイル（Air用）
 ```
+
+## 最近の重要な変更
+
+### 1. UUID型の導入とパラメータ命名規則の統一
+
+すべてのエンドポイントのパスパラメータが統一された命名規則に変更されました：
+
+- `id` → `organizationId` (組織関連エンドポイント)
+- `id` → `userId` (ユーザー関連エンドポイント)
+- `id` → `tenantId` (テナント関連エンドポイント)
+
+**例：**
+```go
+// 旧: /api/v1/organizations/{id}/tenants/{id}
+// 新: /api/v1/organizations/{organizationId}/tenants/{tenantId}
+
+type GetTenantInput struct {
+    OrganizationID uuid.UUID `path:"organizationId" doc:"Organization ID"`
+    TenantID       uuid.UUID `path:"tenantId" doc:"Tenant ID"`
+}
+```
+
+### 2. 認証・認可ミドルウェアの強化
+
+`FiberMiddleware`が組織・テナントの所属確認を自動的に行うように改善されました：
+
+- URLパスから`organizationId`と`tenantId`を自動抽出
+- ユーザーの組織所属を自動検証
+- ユーザーのテナント所属を自動検証
+- **重要**: コントローラーでの所属確認は不要になりました
+
+### 3. システム管理者機能の追加
+
+ユーザーテーブルに`is_system_admin`フィールドが追加され、システム全体の管理者を識別できるようになりました。
+
+## API設計の重要な規約
+
+### エンドポイント形式
+
+**必須**: やむを得ない事情がない限り、エンドポイントは以下の形式で記述してください：
+
+```
+/organizations/{organizationId}/tenants/{tenantId}
+/organizations/{organizationId}/users/{userId}
+/organizations/{organizationId}/tenants/{tenantId}/users/{userId}
+```
+
+### 認証・認可ミドルウェアについて
+
+**重要**: 組織やテナントへのユーザー所属確認は`FiberMiddleware`で完了しています。
+
+```go
+// middleware/auth_middleware.go での処理内容：
+// 1. JWTトークンの検証
+// 2. ユーザー情報の取得とコンテキストへの設定
+// 3. URLパスからorganizationId/tenantIdを抽出
+// 4. ユーザーの組織所属を検証（organizationIdがある場合）
+// 5. ユーザーのテナント所属を検証（tenantIdがある場合）
+```
+
+**したがって、コントローラーでは以下の確認は不要です：**
+- ユーザーが組織に所属しているかの確認
+- ユーザーがテナントに所属しているかの確認
+
+コントローラーは純粋にビジネスロジックの実行に集中できます。
 
 ## アーキテクチャ設計
 
@@ -81,6 +147,7 @@ Huma/Fiber  ビジネスロジック   AWS SDK/外部ライブラリ
    - リポジトリインターフェースの実装
    - 外部サービスとの通信
    - データベースアクセス
+   - ミドルウェアの実装
    
    **重要**: 外部ライブラリに依存する実装は以下のディレクトリ構造に配置：
    - `src/infrastructure/external/` - 外部サービスの実装（AWS SDK、外部APIクライアントなど）
@@ -102,18 +169,21 @@ type Container struct {
     AuthRepository         repository.AuthRepository
     OrganizationRepository repository.OrganizationRepository
     TenantRepository       repository.TenantRepository
+    TenantUserRepository   repository.TenantUserRepository
     
     // Usecases
     AuthUsecase         *publicAuthUsecase.AuthUsecase
     UserUsecase         *userUsecase.UserUsecase
     OrganizationUsecase *organizationUsecase.OrganizationUsecase
     TenantUsecase       *tenantUsecase.TenantUsecase
+    TenantUserUsecase   *tenantUserUsecase.TenantUserUsecase
     
     // Controllers
     AuthController         *publicAuthController.AuthController
     UserController         *userController.UserController
     OrganizationController *authController.OrganizationController
     TenantController       *tenantController.TenantController
+    TenantUserController   *tenantUserController.TenantUserController
     HealthController       *healthController.HealthController
 }
 
@@ -125,6 +195,57 @@ authRouter.RegisterAuthRoutes(api, publicAPI, container.AuthController)
 ```
 
 **重要**: すべてのユースケース、リポジトリ、外部サービスの注入は `ai-matching-golang/src/di/container.go` で行われます。新しい依存関係を追加する際は、このファイルを更新してください。
+
+## ミドルウェアの詳細
+
+### AuthMiddleware の動作
+
+```go
+// src/infrastructure/middleware/auth_middleware.go
+
+func (m *AuthMiddleware) FiberMiddleware() fiber.Handler {
+    return func(c *fiber.Ctx) error {
+        // 1. JWTトークンの検証
+        token, err := m.jwtValidator.ValidateToken(tokenString)
+        
+        // 2. ユーザー情報の取得とコンテキスト設定
+        c.Locals("user_id", userID)
+        c.Locals("organization_id", orgID)
+        c.Locals("tenant_id", tenantID)
+        
+        // 3. URLパスから organizationId を抽出して検証
+        organizationId := extractOrganizationIdFromPath(path)
+        if organizationId != "" {
+            // ユーザーの組織所属を自動検証
+        }
+        
+        // 4. URLパスから tenantId を抽出して検証
+        tenantId := extractTenantIdFromPath(path)
+        if tenantId != "" {
+            // ユーザーのテナント所属を自動検証
+            _, err := m.tenantUserRepo.GetTenantUser(ctx, tenantID, userID)
+        }
+        
+        return c.Next()
+    }
+}
+```
+
+### コンテキストからのユーザー情報取得
+
+```go
+// GetUserFromContext でユーザー情報を取得
+userContext, err := middleware.GetUserFromContext(ctx)
+
+// UserContext構造体
+type UserContext struct {
+    UserID         uuid.UUID
+    Email          string
+    Token          string
+    OrganizationID uuid.UUID
+    Tenant         *Tenant
+}
+```
 
 ## SQLC の使用方法
 
@@ -222,16 +343,17 @@ return tx.Commit()
 ### 1. エンドポイント構成
 
 ```
-/api/v1/public/     # 認証不要
-  - /health         # ヘルスチェック
-  - /auth/login     # ログイン
-  - /auth/register  # ユーザー登録
-  - /auth/refresh   # トークンリフレッシュ
+/api/v1/public/                           # 認証不要
+  - /health                               # ヘルスチェック
+  - /auth/login                           # ログイン
+  - /auth/register                        # ユーザー登録
+  - /auth/refresh                         # トークンリフレッシュ
 
-/api/v1/auth/       # 認証必須
-  - /users          # ユーザー管理
-  - /organizations  # 組織管理
-  - /tenants        # テナント管理
+/api/v1/                             # 認証必須（ミドルウェア適用）
+  - /organizations/{organizationId}/*     # 組織関連エンドポイント
+  - /organizations/{organizationId}/tenants/{tenantId}/*  # テナント関連
+  - /organizations/{organizationId}/users/{userId}/*      # ユーザー関連
+  - /tenants/subdomain/{subdomain}       # サブドメイン検索（特殊ケース）
 ```
 
 ### 2. API機能モジュールの構成
@@ -268,12 +390,16 @@ src/api/
    - ユースケースの呼び出し
    - エラーレスポンスの生成
    ```go
-   type UserController struct {
-       userUsecase *usecase.UserUsecase
+   type TenantController struct {
+       usecase *usecase.TenantUsecase
    }
    
-   func (c *UserController) CreateUser(ctx context.Context, input *CreateUserInput) (*CreateUserOutput, error) {
-       // リクエストをユースケースに渡し、レスポンスを返す
+   func (c *TenantController) CreateTenantInOrganization(ctx context.Context, input *CreateTenantInput) (*CreateTenantOutput, error) {
+       // パスパラメータからorganizationIdを設定
+       input.Body.OrganizationID = input.OrganizationID
+       // ユースケースに処理を委譲
+       resp, err := c.usecase.CreateTenant(ctx, input.Body)
+       return &CreateTenantOutput{Body: *resp}, nil
    }
    ```
 
@@ -282,10 +408,10 @@ src/api/
    - バリデーションルールの設定
    - Humaの自動バリデーション用タグ
    ```go
-   type CreateUserRequest struct {
-       Email     string  `json:"email" validate:"required,email" doc:"User email"`
-       Password  string  `json:"password" validate:"required,min=8" doc:"User password"`
-       FirstName *string `json:"first_name" doc:"User first name"`
+   type CreateTenantRequest struct {
+       Name           string    `json:"name" validate:"required" doc:"Tenant name"`
+       Subdomain      string    `json:"subdomain" validate:"required,min=3" doc:"Tenant subdomain"`
+       OrganizationID uuid.UUID `json:"-"` // パスパラメータから設定
    }
    ```
 
@@ -294,11 +420,13 @@ src/api/
    - データベースモデルからAPIレスポンスへの変換
    - クライアントに返すデータ形式
    ```go
-   type UserResponse struct {
-       ID        int64   `json:"id"`
-       Email     string  `json:"email"`
-       FirstName *string `json:"first_name"`
-       CreatedAt string  `json:"created_at"`
+   type TenantResponse struct {
+       ID             uuid.UUID `json:"id"`
+       Name           string    `json:"name"`
+       Subdomain      string    `json:"subdomain"`
+       OrganizationID uuid.UUID `json:"organization_id"`
+       IsActive       bool      `json:"is_active"`
+       CreatedAt      string    `json:"created_at"`
    }
    ```
 
@@ -308,15 +436,15 @@ src/api/
    - OpenAPI仕様の設定
    - 認証要件の指定
    ```go
-   func RegisterRoutes(api huma.API, controller *controller.UserController) {
+   func RegisterTenantRoutes(api huma.API, router fiber.Router, controller *controller.TenantController) {
        huma.Register(api, huma.Operation{
-           OperationID: "create-user",
+           OperationID: "create-tenant-in-organization",
            Method:      "POST",
-           Path:        "/api/v1/auth/users",
-           Summary:     "Create user",
-           Tags:        []string{"Users"},
+           Path:        "/api/v1/organizations/{organizationId}/tenants",
+           Summary:     "Create tenant in organization",
+           Tags:        []string{"Tenants"},
            Security:    []map[string][]string{{"bearer": {}}},
-       }, controller.CreateUser)
+       }, controller.CreateTenantInOrganization)
    }
    ```
 
@@ -326,13 +454,13 @@ src/api/
    - トランザクション管理
    - データ変換とビジネスルールの適用
    ```go
-   type UserUsecase struct {
-       userRepo repository.UserRepository
+   type TenantUsecase struct {
+       tenantRepo repository.TenantRepository
    }
    
-   func (u *UserUsecase) CreateUser(ctx context.Context, req requests.CreateUserRequest) (*response.UserResponse, error) {
-       // パスワードのハッシュ化
-       // リポジトリを使用してユーザー作成
+   func (u *TenantUsecase) CreateTenant(ctx context.Context, req requests.CreateTenantRequest) (*response.TenantResponse, error) {
+       // サブドメインの重複チェック
+       // テナント作成
        // レスポンスの生成
    }
    ```
@@ -342,35 +470,29 @@ src/api/
 1. 該当するディレクトリ（`auth/` または `public/`）に新しい機能フォルダを作成
 2. 5つのサブフォルダ（controller, requests, response, router, usecase）を作成
 3. 各コンポーネントを実装
-4. メインのルーターファイル（`src/api/router.go`）に新しいルートを登録
+4. DIコンテナ（`src/di/container.go`）に追加
+5. メインのルーターファイル（`src/di/router.go`）に新しいルートを登録
 
 ### 3. Humaフレームワークの使用
 
 #### リクエスト/レスポンス定義
 
 ```go
-// リクエスト
-type CreateUserInput struct {
-    Body requests.CreateUserRequest `doc:"User creation request"`
+// リクエスト（パスパラメータ付き）
+type GetTenantInput struct {
+    OrganizationID uuid.UUID `path:"organizationId" doc:"Organization ID"`
+    TenantID       uuid.UUID `path:"tenantId" doc:"Tenant ID"`
 }
 
-type CreateUserRequest struct {
-    Email     string  `json:"email" validate:"required,email" doc:"User email"`
-    Password  string  `json:"password" validate:"required,min=8" doc:"User password"`
-    FirstName *string `json:"first_name" doc:"User first name"`
-    LastName  *string `json:"last_name" doc:"User last name"`
+// リクエスト（ボディ付き）
+type CreateTenantInput struct {
+    OrganizationID uuid.UUID                   `path:"organizationId" doc:"Organization ID"`
+    Body           requests.CreateTenantRequest `doc:"Tenant creation request"`
 }
 
 // レスポンス
-type CreateUserOutput struct {
-    Body response.UserResponse
-}
-
-type UserResponse struct {
-    ID        int64   `json:"id"`
-    Email     string  `json:"email"`
-    FirstName *string `json:"first_name"`
-    LastName  *string `json:"last_name"`
+type CreateTenantOutput struct {
+    Body response.TenantResponse
 }
 ```
 
@@ -378,14 +500,14 @@ type UserResponse struct {
 
 ```go
 huma.Register(api, huma.Operation{
-    OperationID: "create-user",
-    Method:      "POST",
-    Path:        "/api/v1/auth/users",
-    Summary:     "Create user",
-    Description: "Create a new user",
-    Tags:        []string{"Users"},
+    OperationID: "get-tenant-in-organization",
+    Method:      "GET",
+    Path:        "/api/v1/organizations/{organizationId}/tenants/{tenantId}",
+    Summary:     "Get tenant in organization",
+    Description: "Get tenant by ID within an organization",
+    Tags:        []string{"Tenants"},
     Security:    []map[string][]string{{"bearer": {}}},
-}, userController.CreateUser)
+}, tenantController.GetTenantInOrganization)
 ```
 
 ### 4. エラーハンドリング
@@ -416,6 +538,7 @@ app.Use(func(c *fiber.Ctx) error {
 - インターフェース名: 能力を表す名前 (`UserRepository`, `Querier`)
 - 構造体名: PascalCase (`UserController`, `CreateUserRequest`)
 - メソッド名: PascalCase (`GetUser`, `CreateOrganization`)
+- パスパラメータ: camelCase (`organizationId`, `tenantId`, `userId`)
 
 #### ファイル構成
 - 1ファイル1型を基本とする
@@ -426,18 +549,18 @@ app.Use(func(c *fiber.Ctx) error {
 
 ```go
 // インターフェース定義 (domain/interface/repository/)
-type UserRepository interface {
-    GetUser(ctx context.Context, id int64) (db.User, error)
-    CreateUser(ctx context.Context, params db.CreateUserParams) (db.User, error)
+type TenantUserRepository interface {
+    GetTenantUser(ctx context.Context, tenantID, userID uuid.UUID) (*db.TenantUser, error)
+    ListTenantUsers(ctx context.Context, tenantID uuid.UUID) ([]db.TenantUser, error)
 }
 
 // 実装 (infrastructure/repository/)
-type userRepository struct {
+type tenantUserRepository struct {
     queries db.Querier  // インターフェースを使用
 }
 
-func NewUserRepository(queries db.Querier) repository.UserRepository {
-    return &userRepository{queries: queries}
+func NewTenantUserRepository(queries db.Querier) repository.TenantUserRepository {
+    return &tenantUserRepository{queries: queries}
 }
 ```
 
@@ -464,13 +587,14 @@ func NewCognitoClient() (external.CognitoClient, error) {
 ### 3. ユースケースの実装
 
 ```go
-type UserUsecase struct {
-    userRepo repository.UserRepository
+type TenantUserUsecase struct {
+    tenantUserRepo repository.TenantUserRepository
+    userRepo       repository.UserRepository
 }
 
-func (u *UserUsecase) CreateUser(ctx context.Context, req requests.CreateUserRequest) (*response.UserResponse, error) {
-    // 1. バリデーション
-    // 2. ビジネスロジック（パスワードハッシュ化など）
+func (u *TenantUserUsecase) AddUserToTenant(ctx context.Context, req requests.AddUserToTenantRequest) (*response.TenantUserResponse, error) {
+    // 1. バリデーション（ユーザーの存在確認など）
+    // 2. ビジネスロジック（重複チェックなど）
     // 3. リポジトリ呼び出し
     // 4. レスポンス変換
     return response, nil
@@ -482,8 +606,11 @@ func (u *UserUsecase) CreateUser(ctx context.Context, req requests.CreateUserReq
 すべてのデータベース操作とビジネスロジックでコンテキストを伝播させること：
 
 ```go
-func (r *userRepository) GetUser(ctx context.Context, id int64) (db.User, error) {
-    return r.queries.GetUser(ctx, id)  // 必ずctxを渡す
+func (r *tenantUserRepository) GetTenantUser(ctx context.Context, tenantID, userID uuid.UUID) (*db.TenantUser, error) {
+    return r.queries.GetTenantUser(ctx, db.GetTenantUserParams{
+        TenantID: tenantID,
+        UserID:   userID,
+    })
 }
 ```
 
@@ -517,12 +644,12 @@ make sqlc-generate
 
 ### 1. 認証・認可
 
-現在の実装ではモックトークンを使用していますが、本番環境では以下を実装する必要があります：
+AWS Cognitoを使用したJWT認証が実装されています：
 
-- 適切なJWTライブラリの使用
-- トークンの署名と検証
-- リフレッシュトークンの安全な管理
-- ミドルウェアでの認証チェック
+- JWTトークンの署名と検証
+- リフレッシュトークンの管理
+- ミドルウェアでの自動認証チェック
+- 組織・テナントレベルでのアクセス制御
 
 ### 2. 入力検証
 
@@ -607,8 +734,9 @@ func (m *mockQuerier) GetUser(ctx context.Context, id int64) (db.User, error) {
 5. リポジトリ実装の作成
 6. ユースケースの実装
 7. コントローラーの実装
-8. ルーターへの登録
-9. テストの作成
+8. DIコンテナへの登録
+9. ルーターへの登録
+10. テストの作成
 
 ### 2. 開発コマンド
 
@@ -638,7 +766,7 @@ Organization (組織)
     ↓
 Tenant (テナント/クリニック)
     ↓
-User (ユーザー)
+User (ユーザー) - tenant_users テーブルで関連付け
 ```
 
 ### 2. テナント分離の実装
@@ -646,38 +774,17 @@ User (ユーザー)
 - すべてのクエリでテナントIDによるフィルタリング
 - ミドルウェアでテナントコンテキストの設定
 - サブドメインベースのテナント識別
+- URLパスベースのアクセス制御
 
-## トラブルシューティング
+### 3. アクセス制御の流れ
 
-### 1. SQLC生成エラー
+1. ユーザーがAPIにアクセス
+2. AuthMiddlewareがJWTトークンを検証
+3. URLパスから organizationId/tenantId を抽出
+4. ユーザーの所属を自動検証
+5. 検証成功後、コントローラーに処理を渡す
+6. コントローラーは所属確認なしでビジネスロジックを実行
 
-```bash
-# SQLCのバージョン確認
-sqlc version
-
-# クエリ構文の検証
-sqlc compile
-```
-
-### 2. マイグレーションエラー
-
-```bash
-# 現在のマイグレーションステータス確認
-migrate -database $DATABASE_URL -path db/migrations version
-
-# 強制的に特定バージョンに設定
-migrate -database $DATABASE_URL -path db/migrations force VERSION
-```
-
-### 3. 依存関係の問題
-
-```bash
-# 依存関係の整理
-go mod tidy
-
-# キャッシュクリア
-go clean -modcache
-```
 
 ## ベストプラクティスまとめ
 
@@ -685,7 +792,9 @@ go clean -modcache
 2. **インターフェースの活用**: テスタビリティと柔軟性の確保
 3. **コンテキストの伝播**: タイムアウトとキャンセレーションの対応
 4. **エラーハンドリング**: 適切なエラーメッセージとログ記録
-5. **型安全性**: SQLCによる型安全なデータベースアクセス
+5. **型安全性**: SQLCによる型安全なデータベースアクセス、UUID型の使用
 6. **ドキュメント**: OpenAPI仕様の自動生成を活用
 7. **セキュリティ**: 入力検証、認証・認可の適切な実装
 8. **パフォーマンス**: インデックス、ページネーション、接続プールの最適化
+9. **命名規則の統一**: パスパラメータは必ず具体的な名前（organizationId, tenantId, userId）を使用
+10. **ミドルウェアの活用**: 共通処理（認証・認可）はミドルウェアで一元管理

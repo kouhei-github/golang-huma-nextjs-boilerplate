@@ -6,6 +6,7 @@ import (
 	"ai-matching/src/api/auth/tenant/usecase"
 	"context"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 )
 
@@ -20,7 +21,8 @@ func NewTenantController(tenantUsecase *usecase.TenantUsecase) *TenantController
 }
 
 type GetTenantInput struct {
-	ID uuid.UUID `path:"tenantId" doc:"Tenant ID"`
+	OrganizationID uuid.UUID `path:"organizationId" doc:"Organization ID"`
+	ID             uuid.UUID `path:"tenantId" doc:"Tenant ID"`
 }
 
 type GetTenantOutput struct {
@@ -73,7 +75,8 @@ func (c *TenantController) ListTenantsByOrganization(ctx context.Context, input 
 }
 
 type CreateTenantInput struct {
-	Body requests.CreateTenantRequest
+	OrganizationID uuid.UUID `path:"organizationId" doc:"Organization ID"`
+	Body           requests.CreateTenantRequest
 }
 
 type CreateTenantOutput struct {
@@ -81,6 +84,8 @@ type CreateTenantOutput struct {
 }
 
 func (c *TenantController) CreateTenant(ctx context.Context, input *CreateTenantInput) (*CreateTenantOutput, error) {
+	// Set organization ID from path parameter
+	input.Body.OrganizationID = input.OrganizationID
 	resp, err := c.usecase.CreateTenant(ctx, input.Body)
 	if err != nil {
 		return nil, err
@@ -90,8 +95,9 @@ func (c *TenantController) CreateTenant(ctx context.Context, input *CreateTenant
 }
 
 type UpdateTenantInput struct {
-	ID   uuid.UUID `path:"tenantId" doc:"Tenant ID"`
-	Body requests.UpdateTenantRequest
+	OrganizationID uuid.UUID `path:"organizationId" doc:"Organization ID"`
+	ID             uuid.UUID `path:"tenantId" doc:"Tenant ID"`
+	Body           requests.UpdateTenantRequest
 }
 
 type UpdateTenantOutput struct {
@@ -108,7 +114,8 @@ func (c *TenantController) UpdateTenant(ctx context.Context, input *UpdateTenant
 }
 
 type DeleteTenantInput struct {
-	ID uuid.UUID `path:"tenantId" doc:"Tenant ID"`
+	OrganizationID uuid.UUID `path:"organizationId" doc:"Organization ID"`
+	ID             uuid.UUID `path:"tenantId" doc:"Tenant ID"`
 }
 
 type DeleteTenantOutput struct {
@@ -122,4 +129,110 @@ func (c *TenantController) DeleteTenant(ctx context.Context, input *DeleteTenant
 	}
 
 	return &DeleteTenantOutput{Success: true}, nil
+}
+
+// Organization-scoped tenant endpoints
+
+type GetTenantInOrganizationInput struct {
+	OrganizationID uuid.UUID `path:"organizationId" doc:"Organization ID"`
+	TenantID       uuid.UUID `path:"tenantId" doc:"Tenant ID"`
+}
+
+type GetTenantInOrganizationOutput struct {
+	Body response.TenantResponse
+}
+
+func (c *TenantController) GetTenantInOrganization(ctx context.Context, input *GetTenantInOrganizationInput) (*GetTenantInOrganizationOutput, error) {
+	// First get the tenant
+	resp, err := c.usecase.GetTenant(ctx, input.TenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Verify it belongs to the organization
+	if resp.OrganizationID != input.OrganizationID {
+		return nil, fiber.NewError(fiber.StatusNotFound, "Tenant not found in organization")
+	}
+
+	return &GetTenantInOrganizationOutput{Body: *resp}, nil
+}
+
+type CreateTenantInOrganizationInput struct {
+	OrganizationID uuid.UUID `path:"organizationId" doc:"Organization ID"`
+	Body           requests.CreateTenantRequest
+}
+
+type CreateTenantInOrganizationOutput struct {
+	Body response.TenantResponse
+}
+
+func (c *TenantController) CreateTenantInOrganization(ctx context.Context, input *CreateTenantInOrganizationInput) (*CreateTenantInOrganizationOutput, error) {
+	// Set the organization ID from the path
+	input.Body.OrganizationID = input.OrganizationID
+
+	resp, err := c.usecase.CreateTenant(ctx, input.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return &CreateTenantInOrganizationOutput{Body: *resp}, nil
+}
+
+type UpdateTenantInOrganizationInput struct {
+	OrganizationID uuid.UUID `path:"organizationId" doc:"Organization ID"`
+	TenantID       uuid.UUID `path:"tenantId" doc:"Tenant ID"`
+	Body           requests.UpdateTenantRequest
+}
+
+type UpdateTenantInOrganizationOutput struct {
+	Body response.TenantResponse
+}
+
+func (c *TenantController) UpdateTenantInOrganization(ctx context.Context, input *UpdateTenantInOrganizationInput) (*UpdateTenantInOrganizationOutput, error) {
+	// First get the tenant to verify organization
+	tenant, err := c.usecase.GetTenant(ctx, input.TenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Verify it belongs to the organization
+	if tenant.OrganizationID != input.OrganizationID {
+		return nil, fiber.NewError(fiber.StatusNotFound, "Tenant not found in organization")
+	}
+
+	resp, err := c.usecase.UpdateTenant(ctx, input.TenantID, input.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return &UpdateTenantInOrganizationOutput{Body: *resp}, nil
+}
+
+type DeleteTenantInOrganizationInput struct {
+	OrganizationID uuid.UUID `path:"organizationId" doc:"Organization ID"`
+	TenantID       uuid.UUID `path:"tenantId" doc:"Tenant ID"`
+}
+
+type DeleteTenantInOrganizationOutput struct {
+	Success bool `json:"success"`
+}
+
+func (c *TenantController) DeleteTenantInOrganization(ctx context.Context, input *DeleteTenantInOrganizationInput) (*DeleteTenantInOrganizationOutput, error) {
+	// First get the tenant to verify organization
+	tenant, err := c.usecase.GetTenant(ctx, input.TenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Verify it belongs to the organization
+	if tenant.OrganizationID != input.OrganizationID {
+		return nil, fiber.NewError(fiber.StatusNotFound, "Tenant not found in organization")
+	}
+
+	err = c.usecase.DeleteTenant(ctx, input.TenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &DeleteTenantInOrganizationOutput{Success: true}, nil
 }

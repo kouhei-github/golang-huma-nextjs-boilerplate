@@ -8,54 +8,54 @@ import (
 )
 
 func RegisterUserRoutes(api huma.API, router fiber.Router, userController *controller.UserController) {
-
+	// Organization-level user endpoints
 	huma.Register(api, huma.Operation{
-		OperationID: "get-user",
+		OperationID: "list-organization-users",
 		Method:      "GET",
-		Path:        "/api/v1/auth/users/{userId}",
-		Summary:     "Get user",
-		Description: "Get user by ID",
+		Path:        "/api/v1/organizations/{organizationId}/users",
+		Summary:     "List users in organization",
+		Description: "List all users in an organization",
 		Tags:        []string{"Users"},
 		Security:    []map[string][]string{{"bearer": {}}},
-	}, userController.GetUser)
+	}, userController.ListOrganizationUsers)
 
 	huma.Register(api, huma.Operation{
-		OperationID: "list-users",
+		OperationID: "get-organization-user",
 		Method:      "GET",
-		Path:        "/api/v1/auth/users",
-		Summary:     "List users",
-		Description: "List all users",
+		Path:        "/api/v1/organizations/{organizationId}/users/{userId}",
+		Summary:     "Get user in organization",
+		Description: "Get user by ID within an organization",
 		Tags:        []string{"Users"},
 		Security:    []map[string][]string{{"bearer": {}}},
-	}, userController.ListUsers)
+	}, userController.GetOrganizationUser)
 
 	huma.Register(api, huma.Operation{
-		OperationID: "create-user",
+		OperationID: "create-organization-user",
 		Method:      "POST",
-		Path:        "/api/v1/auth/users",
-		Summary:     "Create user",
-		Description: "Create a new user",
+		Path:        "/api/v1/organizations/{organizationId}/users",
+		Summary:     "Create user in organization",
+		Description: "Create a new user within an organization",
 		Tags:        []string{"Users"},
 		Security:    []map[string][]string{{"bearer": {}}},
-	}, userController.CreateUser)
+	}, userController.CreateOrganizationUser)
 
 	huma.Register(api, huma.Operation{
-		OperationID: "update-user",
+		OperationID: "update-organization-user",
 		Method:      "PUT",
-		Path:        "/api/v1/auth/users/{userId}",
-		Summary:     "Update user",
-		Description: "Update an existing user",
+		Path:        "/api/v1/organizations/{organizationId}/users/{userId}",
+		Summary:     "Update user in organization",
+		Description: "Update an existing user within an organization",
 		Tags:        []string{"Users"},
 		Security:    []map[string][]string{{"bearer": {}}},
-	}, userController.UpdateUser)
+	}, userController.UpdateOrganizationUser)
 
 	huma.Register(api, huma.Operation{
-		OperationID: "delete-user",
+		OperationID: "delete-organization-user",
 		Method:      "DELETE",
-		Path:        "/api/v1/auth/users/{userId}",
-		Summary:     "Delete user",
-		Description: "Delete a user",
+		Path:        "/api/v1/organizations/{organizationId}/users/{userId}",
+		Summary:     "Delete user from organization",
+		Description: "Delete a user from an organization",
 		Tags:        []string{"Users"},
 		Security:    []map[string][]string{{"bearer": {}}},
-	}, userController.DeleteUser)
+	}, userController.DeleteOrganizationUser)
 }

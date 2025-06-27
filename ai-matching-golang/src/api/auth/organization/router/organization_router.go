@@ -12,7 +12,7 @@ func RegisterOrganizationRoutes(api huma.API, router fiber.Router, orgController
 	huma.Register(api, huma.Operation{
 		OperationID: "get-organization",
 		Method:      "GET",
-		Path:        "/api/v1/auth/organizations/{organizationId}",
+		Path:        "/api/v1/organizations/{organizationId}",
 		Summary:     "Get organization",
 		Description: "Get organization by ID",
 		Tags:        []string{"Organizations"},
@@ -22,7 +22,7 @@ func RegisterOrganizationRoutes(api huma.API, router fiber.Router, orgController
 	huma.Register(api, huma.Operation{
 		OperationID: "list-organizations",
 		Method:      "GET",
-		Path:        "/api/v1/auth/organizations",
+		Path:        "/api/v1/organizations",
 		Summary:     "List organizations",
 		Description: "List all organizations",
 		Tags:        []string{"Organizations"},
@@ -32,7 +32,7 @@ func RegisterOrganizationRoutes(api huma.API, router fiber.Router, orgController
 	huma.Register(api, huma.Operation{
 		OperationID: "create-organization",
 		Method:      "POST",
-		Path:        "/api/v1/auth/organizations",
+		Path:        "/api/v1/organizations",
 		Summary:     "Create organization",
 		Description: "Create a new organization",
 		Tags:        []string{"Organizations"},
@@ -42,7 +42,7 @@ func RegisterOrganizationRoutes(api huma.API, router fiber.Router, orgController
 	huma.Register(api, huma.Operation{
 		OperationID: "update-organization",
 		Method:      "PUT",
-		Path:        "/api/v1/auth/organizations/{organizationId}",
+		Path:        "/api/v1/organizations/{organizationId}",
 		Summary:     "Update organization",
 		Description: "Update an existing organization",
 		Tags:        []string{"Organizations"},
@@ -52,7 +52,7 @@ func RegisterOrganizationRoutes(api huma.API, router fiber.Router, orgController
 	huma.Register(api, huma.Operation{
 		OperationID: "delete-organization",
 		Method:      "DELETE",
-		Path:        "/api/v1/auth/organizations/{organizationId}",
+		Path:        "/api/v1/organizations/{organizationId}",
 		Summary:     "Delete organization",
 		Description: "Delete an organization",
 		Tags:        []string{"Organizations"},

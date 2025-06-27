@@ -8,31 +8,11 @@ import (
 )
 
 func RegisterTenantRoutes(api huma.API, router fiber.Router, tenantController *controller.TenantController) {
-
-	huma.Register(api, huma.Operation{
-		OperationID: "get-tenant",
-		Method:      "GET",
-		Path:        "/api/v1/auth/tenants/{tenantId}",
-		Summary:     "Get tenant",
-		Description: "Get tenant by ID",
-		Tags:        []string{"Tenants"},
-		Security:    []map[string][]string{{"bearer": {}}},
-	}, tenantController.GetTenant)
-
-	huma.Register(api, huma.Operation{
-		OperationID: "get-tenant-by-subdomain",
-		Method:      "GET",
-		Path:        "/api/v1/auth/tenants/subdomain/{subdomain}",
-		Summary:     "Get tenant by subdomain",
-		Description: "Get tenant by subdomain",
-		Tags:        []string{"Tenants"},
-		Security:    []map[string][]string{{"bearer": {}}},
-	}, tenantController.GetTenantBySubdomain)
-
+	// Organization-scoped tenant endpoints
 	huma.Register(api, huma.Operation{
 		OperationID: "list-tenants-by-organization",
 		Method:      "GET",
-		Path:        "/api/v1/auth/organizations/{organizationId}/tenants",
+		Path:        "/api/v1/organizations/{organizationId}/tenants",
 		Summary:     "List tenants by organization",
 		Description: "List all tenants for an organization",
 		Tags:        []string{"Tenants"},
@@ -40,32 +20,53 @@ func RegisterTenantRoutes(api huma.API, router fiber.Router, tenantController *c
 	}, tenantController.ListTenantsByOrganization)
 
 	huma.Register(api, huma.Operation{
-		OperationID: "create-tenant",
+		OperationID: "get-tenant-in-organization",
+		Method:      "GET",
+		Path:        "/api/v1/organizations/{organizationId}/tenants/{tenantId}",
+		Summary:     "Get tenant in organization",
+		Description: "Get tenant by ID within an organization",
+		Tags:        []string{"Tenants"},
+		Security:    []map[string][]string{{"bearer": {}}},
+	}, tenantController.GetTenantInOrganization)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "create-tenant-in-organization",
 		Method:      "POST",
-		Path:        "/api/v1/auth/tenants",
-		Summary:     "Create tenant",
-		Description: "Create a new tenant",
+		Path:        "/api/v1/organizations/{organizationId}/tenants",
+		Summary:     "Create tenant in organization",
+		Description: "Create a new tenant within an organization",
 		Tags:        []string{"Tenants"},
 		Security:    []map[string][]string{{"bearer": {}}},
-	}, tenantController.CreateTenant)
+	}, tenantController.CreateTenantInOrganization)
 
 	huma.Register(api, huma.Operation{
-		OperationID: "update-tenant",
+		OperationID: "update-tenant-in-organization",
 		Method:      "PUT",
-		Path:        "/api/v1/auth/tenants/{tenantId}",
-		Summary:     "Update tenant",
-		Description: "Update an existing tenant",
+		Path:        "/api/v1/organizations/{organizationId}/tenants/{tenantId}",
+		Summary:     "Update tenant in organization",
+		Description: "Update an existing tenant within an organization",
 		Tags:        []string{"Tenants"},
 		Security:    []map[string][]string{{"bearer": {}}},
-	}, tenantController.UpdateTenant)
+	}, tenantController.UpdateTenantInOrganization)
 
 	huma.Register(api, huma.Operation{
-		OperationID: "delete-tenant",
+		OperationID: "delete-tenant-in-organization",
 		Method:      "DELETE",
-		Path:        "/api/v1/auth/tenants/{tenantId}",
-		Summary:     "Delete tenant",
-		Description: "Delete a tenant",
+		Path:        "/api/v1/organizations/{organizationId}/tenants/{tenantId}",
+		Summary:     "Delete tenant in organization",
+		Description: "Delete a tenant within an organization",
 		Tags:        []string{"Tenants"},
 		Security:    []map[string][]string{{"bearer": {}}},
-	}, tenantController.DeleteTenant)
+	}, tenantController.DeleteTenantInOrganization)
+
+	// Global tenant endpoint (for subdomain lookup during login)
+	huma.Register(api, huma.Operation{
+		OperationID: "get-tenant-by-subdomain",
+		Method:      "GET",
+		Path:        "/api/v1/tenants/subdomain/{subdomain}",
+		Summary:     "Get tenant by subdomain",
+		Description: "Get tenant by subdomain (used for login/redirect)",
+		Tags:        []string{"Tenants"},
+		Security:    []map[string][]string{{"bearer": {}}},
+	}, tenantController.GetTenantBySubdomain)
 }
