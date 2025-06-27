@@ -1,3 +1,2 @@
 # Cognito local runtime data
-.cognito/db/*.json
-!.cognito/db/local_pool_id.json.template
+.cognito/db/local_pool_id.json

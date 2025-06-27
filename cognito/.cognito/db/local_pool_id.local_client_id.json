@@ -1,0 +1,28 @@
+{
+  "ClientId": "local_client_id",
+  "ClientName": "Local Client",
+  "ClientSecret": "local_client_secret",
+  "UserPoolId": "local_pool_id",
+  "ExplicitAuthFlows": [
+    "ALLOW_USER_PASSWORD_AUTH",
+    "ALLOW_REFRESH_TOKEN_AUTH"
+  ],
+  "ReadAttributes": [
+    "email",
+    "given_name",
+    "family_name"
+  ],
+  "WriteAttributes": [
+    "email",
+    "given_name",
+    "family_name"
+  ],
+  "RefreshTokenValidity": 30,
+  "AccessTokenValidity": 60,
+  "IdTokenValidity": 60,
+  "TokenValidityUnits": {
+    "AccessToken": "minutes",
+    "IdToken": "minutes",
+    "RefreshToken": "days"
+  }
+}

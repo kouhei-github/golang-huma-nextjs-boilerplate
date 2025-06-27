@@ -1,0 +1,53 @@
+{
+  "Clients": {
+    "local_client_id": {
+      "ClientId": "local_client_id",
+      "ClientName": "Local Client",
+      "ClientSecret": "local_client_secret",
+      "UserPoolId": "local_pool_id",
+      "ExplicitAuthFlows": [
+        "ALLOW_USER_PASSWORD_AUTH",
+        "ALLOW_REFRESH_TOKEN_AUTH"
+      ],
+      "ReadAttributes": [
+        "email",
+        "given_name",
+        "family_name"
+      ],
+      "WriteAttributes": [
+        "email",
+        "given_name",
+        "family_name"
+      ],
+      "RefreshTokenValidity": 30,
+      "AccessTokenValidity": 60,
+      "IdTokenValidity": 60,
+      "TokenValidityUnits": {
+        "AccessToken": "minutes",
+        "IdToken": "minutes",
+        "RefreshToken": "days"
+      },
+      "AllowedOAuthFlows": [],
+      "AllowedOAuthScopes": [],
+      "CallbackURLs": [],
+      "LogoutURLs": []
+    },
+    "0pe7dffwffm1vxqgsxm7m49bm": {
+      "ClientId": "0pe7dffwffm1vxqgsxm7m49bm",
+      "ClientName": "Local Client",
+      "ClientSecret": "5046i1y96e682milxfpjlnb71",
+      "CreationDate": "2025-06-27T05:50:38.663Z",
+      "ExplicitAuthFlows": [
+        "ALLOW_USER_PASSWORD_AUTH",
+        "ALLOW_REFRESH_TOKEN_AUTH"
+      ],
+      "LastModifiedDate": "2025-06-27T05:50:38.663Z",
+      "TokenValidityUnits": {
+        "AccessToken": "hours",
+        "IdToken": "minutes",
+        "RefreshToken": "days"
+      },
+      "UserPoolId": "local_7GQS0n0W"
+    }
+  }
+}
