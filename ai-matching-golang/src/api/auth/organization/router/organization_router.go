@@ -52,7 +52,7 @@ func RegisterOrganizationRoutes(api huma.API, router fiber.Router, orgController
 	huma.Register(api, huma.Operation{
 		OperationID: "delete-organization",
 		Method:      "DELETE",
-		Path:        "/api/v1/auth/organizations/{id}",
+		Path:        "/api/v1/auth/organizations/{organizationId}",
 		Summary:     "Delete organization",
 		Description: "Delete an organization",
 		Tags:        []string{"Organizations"},
