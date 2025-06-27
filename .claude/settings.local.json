@@ -5,7 +5,10 @@
       "Bash(mv:*)",
       "Bash(docker-compose build:*)",
       "Bash(grep:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npx create-next-app:*)",
+      "Bash(rm:*)",
+      "Bash(touch:*)"
     ],
     "deny": []
   }
